@@ -1,0 +1,58 @@
+Phase 1: Prototype (Proof of Understanding)
+Target: Parse & index 2 XML feeds (e.g., ekos & beq), deploy minimal backend on a temporary server, show fast search.
+
+1. Tech Stack
+Backend: FastAPI or Node.js (whichever you prefer; I suggest FastAPI for async XML handling + performance)
+
+Database: PostgreSQL (with JSONB fields where needed), using proper indexing strategies (GIN, trigram)
+
+Search Engine: Typesense (self-hosted) or Algolia (if SaaS is acceptable for now)
+
+Automation: n8n for scheduled feed fetching/parsing (daily or per need)
+
+Hosting: Will run sample on any VPS (e.g., Render, Fly.io, or even a local VM with port forwarding)
+
+2. Key Features
+Normalize XML into tables: products, shops, brands, categories, colors, sizes
+
+Handle nested/variant structures in XML (e.g., multiple sizes/colors per product)
+
+Create search API with filters: title, EAN, brand, price, availability, etc.
+
+Add AI typo correction/synonyms (OpenAI API or prebuilt typo libraries, optional at this stage)
+
+⚙️ Sample Backend Demo Plan
+I’ll:
+
+Fetch and parse https://ekos.gr/xml_feed/skroutz_ekos.xml and https://beq.gr/xml_feed/skroutz_beq.xml
+
+Normalize and store ~50K–100K products into PostgreSQL
+
+Index into Typesense for fast search with filters
+
+Expose API endpoints like:
+
+sql
+Copy
+Edit
+GET /search?title=printer&brand=HP&min_price=50&max_price=200&availability=true
+GET /product/:ean
+Show a minimal search frontend using your current frontend (marketgr) for preview.
+
+💡 Scalable Architecture
+Built to support 5,000 XML feeds:
+
+Feed metadata and logs stored per e-shop
+
+Deduplication logic (by EAN/MPN) across shops
+
+Scheduled refresh (with retry/failure handling)
+
+Horizontal scaling ready: separate workers for ingestion, enrichment, and indexing
+
+✅ What I need from you to start:
+Confirmation to proceed with the 2-shop prototype
+
+Optional access to your Netlify frontend (or I’ll just mock search calls to match it)
+
+If you have preferred categories mapping, send that too (for normalization)
