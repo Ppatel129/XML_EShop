@@ -5,7 +5,12 @@ class AdminApp {
     }
 
     init() {
-        this.processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
+        // Initialize processing modal if Bootstrap is available
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            this.processingModal = new bootstrap.Modal(document.getElementById('processingModal'));
+        } else {
+            this.processingModal = null;
+        }
         this.loadInitialData();
     }
 
@@ -118,7 +123,9 @@ class AdminApp {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
             
-            this.processingModal.show();
+            if (this.processingModal) {
+                this.processingModal.show();
+            }
             this.addLog('Starting feed processing...', 'info');
 
             const response = await axios.post('/admin/process-feeds');
@@ -145,7 +152,9 @@ class AdminApp {
             console.error('Error processing feeds:', error);
             this.addLog('Error processing feeds: ' + error.message, 'error');
         } finally {
-            this.processingModal.hide();
+            if (this.processingModal) {
+                this.processingModal.hide();
+            }
             const btn = document.getElementById('processFeedsBtn');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-play me-2"></i>Process All Feeds';

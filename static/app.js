@@ -271,8 +271,15 @@ class ProductSearchApp {
                 </div>
             `;
 
-            const modal = new bootstrap.Modal(document.getElementById('productModal'));
-            modal.show();
+            const modalElement = document.getElementById('productModal');
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                // Fallback - just show the modal directly
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+            }
 
         } catch (error) {
             console.error('Error loading product details:', error);
@@ -337,8 +344,15 @@ class ProductSearchApp {
                 </div>
             `;
 
-            const modal = new bootstrap.Modal(document.getElementById('statsModal'));
-            modal.show();
+            const modalElement = document.getElementById('statsModal');
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            } else {
+                // Fallback - just show the modal directly
+                modalElement.style.display = 'block';
+                modalElement.classList.add('show');
+            }
 
         } catch (error) {
             console.error('Error loading stats:', error);
