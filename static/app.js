@@ -127,6 +127,10 @@ class ProductSearchApp {
             '<span class="badge bg-success">Available</span>' : 
             '<span class="badge bg-danger">Out of Stock</span>';
         
+        const stockInfo = product.stock_quantity ? 
+            `<small class="text-muted">Stock: ${product.stock_quantity}</small>` : 
+            '<small class="text-muted">Stock: N/A</small>';
+        
         const price = product.price ? `€${product.price.toFixed(2)}` : 'Price not available';
         const originalPrice = product.original_price && product.original_price > product.price ? 
             `<del class="text-muted">€${product.original_price.toFixed(2)}</del>` : '';
@@ -145,6 +149,9 @@ class ProductSearchApp {
                                     ${originalPrice}
                                 </div>
                                 ${availability}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                ${stockInfo}
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted">
