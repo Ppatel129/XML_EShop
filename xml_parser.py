@@ -28,6 +28,9 @@ class XMLFeedParser:
         """Fetch XML content from URL"""
         try:
             logger.info(f"Fetching XML from: {url}")
+            if self.session is None:
+                logger.error("Session is not initialized")
+                return None
             async with self.session.get(url) as response:
                 if response.status == 200:
                     content = await response.text()
@@ -178,11 +181,10 @@ class XMLFeedParser:
                 product_data['original_price'] = self.extract_price(product_data['original_price'])
             
             # Calculate discount
-            if product_data.get('price') and product_data.get('original_price'):
-                original = product_data['original_price']
-                current = product_data['price']
-                if original > current:
-                    product_data['discount_percentage'] = round(((original - current) / original) * 100, 2)
+            price = product_data.get('price')
+            original_price = product_data.get('original_price')
+            if price is not None and original_price is not None and original_price > price:
+                product_data['discount_percentage'] = round(((original_price - price) / original_price) * 100, 2)
             
             # Process availability
             if 'availability' in product_data:
@@ -210,13 +212,20 @@ class XMLFeedParser:
                 product_data['category'] = main_category
                 product_data['category_path'] = category_path
             
-            # Create search text
+            # Create search text (limit length to avoid index issues)
             search_parts = []
-            for field in ['title', 'description', 'brand', 'category', 'ean', 'mpn']:
+            for field in ['title', 'brand', 'category', 'ean', 'mpn']:
                 if field in product_data and product_data[field]:
                     search_parts.append(str(product_data[field]))
             
-            product_data['search_text'] = ' '.join(search_parts)
+            # Add limited description (first 200 chars)
+            if 'description' in product_data and product_data['description']:
+                desc = str(product_data['description'])[:200]
+                search_parts.append(desc)
+            
+            search_text = ' '.join(search_parts)
+            # Limit total search text to 1000 characters to avoid index issues
+            product_data['search_text'] = search_text[:1000]
             
             # Extract specifications from remaining elements
             specs = {}

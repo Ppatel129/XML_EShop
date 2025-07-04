@@ -61,6 +61,12 @@ async def root():
     with open("static/index.html", "r") as f:
         return HTMLResponse(content=f.read())
 
+@app.get("/admin", response_class=HTMLResponse)
+async def admin():
+    """Serve the admin dashboard"""
+    with open("static/admin.html", "r") as f:
+        return HTMLResponse(content=f.read())
+
 @app.get("/search", response_model=SearchResponse)
 async def search_products(
     title: Optional[str] = Query(None, description="Search in product title"),

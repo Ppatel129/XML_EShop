@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - E-commerce Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-cog me-2"></i>
+                Admin Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="fas fa-search me-1"></i>
+                    Back to Search
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- System Statistics -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            System Statistics
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="statsContainer">
+                            <!-- Stats will be loaded here -->
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="refreshStats()">
+                                <i class="fas fa-sync me-2"></i>
+                                Refresh Stats
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feed Management -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-rss me-2"></i>
+                            Feed Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Manual Feed Processing</h6>
+                                        <p class="card-text">Process all XML feeds now</p>
+                                        <button class="btn btn-success" onclick="processFeeds()" id="processFeedsBtn">
+                                            <i class="fas fa-play me-2"></i>
+                                            Process All Feeds
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Database Cleanup</h6>
+                                        <p class="card-text">Clean up duplicate products</p>
+                                        <button class="btn btn-warning" onclick="cleanupDatabase()">
+                                            <i class="fas fa-broom me-2"></i>
+                                            Cleanup Database
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shops Management -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-store me-2"></i>
+                            Shops Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Shop Name</th>
+                                        <th>XML URL</th>
+                                        <th>Last Sync</th>
+                                        <th>Status</th>
+                                        <th>Products</th>
+                                        <th>Error Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="shopsTable">
+                                    <!-- Shops data will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-primary mt-3" onclick="refreshShops()">
+                            <i class="fas fa-sync me-2"></i>
+                            Refresh Shops
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Log -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Processing Log
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="processingLog" style="height: 300px; overflow-y: auto; background-color: #f8f9fa; padding: 1rem; border-radius: 0.375rem;">
+                            <p class="text-muted">Processing logs will appear here...</p>
+                        </div>
+                        <button class="btn btn-secondary mt-3" onclick="clearLog()">
+                            <i class="fas fa-trash me-2"></i>
+                            Clear Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Modal -->
+    <div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Processing Feeds</h5>
+                </div>
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Processing XML feeds... This may take several minutes.</p>
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/static/admin.js"></script>
+</body>
+</html>
