@@ -148,6 +148,7 @@ class XMLFeedParser:
                 'mpn': ['mpn', 'model', 'part_number'],
                 'sku': ['sku', 'id', 'product_id', 'uid'],
                 'price': ['price_with_vat', 'price', 'final_price', 'selling_price'],
+                'price_without_vat': ['price_without_vat', 'price_no_vat', 'net_price'],
                 'original_price': ['original_price', 'list_price'],
                 'availability': ['instock', 'availability', 'in_stock', 'stock'],
                 'stock_quantity': ['quantity', 'stock_quantity'],
@@ -176,6 +177,12 @@ class XMLFeedParser:
             # Process price
             if 'price' in product_data:
                 product_data['price'] = self.extract_price(product_data['price'])
+            
+            if 'price_without_vat' in product_data:
+                product_data['price_without_vat'] = self.extract_price(product_data['price_without_vat'])
+                # If we have price without VAT, use it as the main price
+                if product_data['price_without_vat']:
+                    product_data['price'] = product_data['price_without_vat']
             
             if 'original_price' in product_data:
                 product_data['original_price'] = self.extract_price(product_data['original_price'])

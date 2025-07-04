@@ -132,6 +132,7 @@ class ProductSearchApp {
             '<small class="text-muted">Stock: N/A</small>';
         
         const price = product.price ? `€${product.price.toFixed(2)}` : 'Price not available';
+        const priceNote = '<small class="text-muted d-block">XML feed price</small>';
         const originalPrice = product.original_price && product.original_price > product.price ? 
             `<del class="text-muted">€${product.original_price.toFixed(2)}</del>` : '';
         
@@ -147,6 +148,7 @@ class ProductSearchApp {
                                 <div class="price">
                                     <strong class="text-primary">${price}</strong>
                                     ${originalPrice}
+                                    ${priceNote}
                                 </div>
                                 ${availability}
                             </div>
