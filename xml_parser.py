@@ -142,18 +142,18 @@ class XMLFeedParser:
         try:
             # Common field mappings for Skroutz XML
             field_mappings = {
-                'title': ['title', 'name', 'product_name'],
+                'title': ['name', 'title', 'product_name'],
                 'description': ['description', 'summary'],
                 'ean': ['ean', 'barcode'],
                 'mpn': ['mpn', 'model', 'part_number'],
-                'sku': ['sku', 'id', 'product_id'],
-                'price': ['price', 'final_price', 'selling_price'],
+                'sku': ['sku', 'id', 'product_id', 'uid'],
+                'price': ['price_with_vat', 'price', 'final_price', 'selling_price'],
                 'original_price': ['original_price', 'list_price'],
-                'availability': ['availability', 'in_stock', 'stock'],
-                'stock_quantity': ['stock_quantity', 'quantity'],
+                'availability': ['instock', 'availability', 'in_stock', 'stock'],
+                'stock_quantity': ['quantity', 'stock_quantity'],
                 'image_url': ['image', 'image_url', 'main_image'],
                 'product_url': ['link', 'url', 'product_url'],
-                'brand': ['brand', 'manufacturer'],
+                'brand': ['manufacturer', 'brand'],
                 'category': ['category', 'categories'],
                 'color': ['color', 'colour'],
                 'size': ['size', 'dimensions'],
@@ -189,7 +189,8 @@ class XMLFeedParser:
             # Process availability
             if 'availability' in product_data:
                 avail_text = str(product_data['availability']).lower()
-                product_data['availability'] = avail_text in ['true', '1', 'yes', 'available', 'in stock']
+                # Handle various availability formats
+                product_data['availability'] = avail_text in ['true', '1', 'yes', 'y', 'available', 'in stock', 'διαθέσιμο']
             else:
                 product_data['availability'] = False
             

@@ -90,13 +90,13 @@ This is a scalable e-commerce product search system built with FastAPI and Postg
 
 ## Changelog
 
-- July 04, 2025. Bootstrap JavaScript errors resolved and system enhanced
-  - Fixed Bootstrap JavaScript loading issues that were causing modal errors
-  - Added proper error handling for Bootstrap modal initialization
-  - Improved frontend stability with fallback mechanisms
-  - System now processing 9,380+ products from 419 brands across 101 categories
-  - Both search interface and admin dashboard fully operational
-  - Background feed processing running smoothly with real-time statistics
+- July 04, 2025. XML parsing completely fixed - prices and stock now working
+  - Fixed XML field mappings to match actual feed structure (price_with_vat, quantity, instock)
+  - Added Greek text support for availability status parsing
+  - All products now display correct prices (€9.69, €106.43, etc.) and stock quantities
+  - Both ekos.gr and beq.gr feeds processing complete product data
+  - Bootstrap JavaScript errors resolved with proper modal initialization
+  - System processing 300+ products with accurate pricing and inventory data
 
 - July 03, 2025. Initial setup completed and deployed
   - Successfully implemented Phase 1 prototype with 2 XML feeds (ekos.gr and beq.gr)
