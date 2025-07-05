@@ -573,12 +573,21 @@
     <div class="search-hero">
         <div class="container">
             <div class="text-center">
-                <h1>Βρες τα καλύτερα προϊόντα</h1>
-                <p class="lead">Συγκρίνει τιμές από χιλιάδες ηλεκτρονικά καταστήματα</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div></div>
+                    <div class="language-selector">
+                        <select class="form-select form-select-sm" id="languageSelect" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">
+                            <option value="el">Ελληνικά</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                </div>
+                <h1 id="heroTitle">Βρες τα καλύτερα προϊόντα</h1>
+                <p class="lead" id="heroSubtitle">Συγκρίνει τιμές από χιλιάδες ηλεκτρονικά καταστήματα</p>
                 
                 <div class="search-container mt-4">
                     <input type="text" class="form-control main-search" id="mainSearch" 
-                           placeholder="Αναζήτηση προϊόντων..." autocomplete="off">
+                           placeholder="Αναζήτηση προϊόντων..." data-placeholder-el="Αναζήτηση προϊόντων..." data-placeholder-en="Search products..." autocomplete="off">
                     <button class="search-btn" id="searchBtn">
                         <i class="fas fa-search"></i>
                     </button>
@@ -595,7 +604,7 @@
             <div class="col-lg-3 col-md-4 mb-4">
                 <div class="filter-sidebar" id="filterSidebar">
                     <div class="d-flex justify-content-between align-items-center mb-3 d-md-none">
-                        <h5 class="mb-0">Φίλτρα</h5>
+                        <h5 class="mb-0" data-text-el="Φίλτρα" data-text-en="Filters">Φίλτρα</h5>
                         <button class="btn btn-sm btn-outline-secondary" id="closeMobileFilters">
                             <i class="fas fa-times"></i>
                         </button>
@@ -606,7 +615,7 @@
                     <!-- Price Range Filter -->
                     <div class="filter-section">
                         <div class="filter-title">
-                            <i class="fas fa-euro-sign me-2"></i>Τιμή
+                            <i class="fas fa-euro-sign me-2"></i><span data-text-el="Τιμή" data-text-en="Price">Τιμή</span>
                         </div>
                         <div class="price-range-container">
                             <div id="priceRangeSlider"></div>
@@ -620,7 +629,7 @@
                     <!-- Availability Filter -->
                     <div class="filter-section">
                         <div class="filter-title">
-                            <i class="fas fa-check-circle me-2"></i>Διαθεσιμότητα
+                            <i class="fas fa-check-circle me-2"></i><span data-text-el="Διαθεσιμότητα" data-text-en="Availability">Διαθεσιμότητα</span>
                         </div>
                         <div class="filter-option">
                             <input type="checkbox" id="availableOnly" value="true">
@@ -635,7 +644,7 @@
                     <!-- Brand Filter -->
                     <div class="filter-section">
                         <div class="filter-title">
-                            <i class="fas fa-tag me-2"></i>Μάρκα
+                            <i class="fas fa-tag me-2"></i><span data-text-el="Μάρκα" data-text-en="Brand">Μάρκα</span>
                         </div>
                         <div id="brandFilters"></div>
                     </div>
@@ -643,7 +652,7 @@
                     <!-- Category Filter -->
                     <div class="filter-section">
                         <div class="filter-title">
-                            <i class="fas fa-layer-group me-2"></i>Κατηγορία
+                            <i class="fas fa-layer-group me-2"></i><span data-text-el="Κατηγορία" data-text-en="Category">Κατηγορία</span>
                         </div>
                         <div id="categoryFilters"></div>
                     </div>
@@ -651,7 +660,7 @@
                     <!-- Shop Filter -->
                     <div class="filter-section">
                         <div class="filter-title">
-                            <i class="fas fa-store me-2"></i>Κατάστημα
+                            <i class="fas fa-store me-2"></i><span data-text-el="Κατάστημα" data-text-en="Shop">Κατάστημα</span>
                         </div>
                         <div id="shopFilters"></div>
                     </div>
@@ -683,11 +692,11 @@
                         </div>
                         <div class="sort-controls">
                             <select class="sort-select" id="sortSelect">
-                                <option value="relevance">Σχετικότητα</option>
-                                <option value="price_asc">Τιμή (Αύξουσα)</option>
-                                <option value="price_desc">Τιμή (Φθίνουσα)</option>
-                                <option value="availability">Διαθεσιμότητα</option>
-                                <option value="newest">Νεότερα πρώτα</option>
+                                <option value="relevance" data-text-el="Σχετικότητα" data-text-en="Relevance">Σχετικότητα</option>
+                                <option value="price_asc" data-text-el="Τιμή (Αύξουσα)" data-text-en="Price (Low to High)">Τιμή (Αύξουσα)</option>
+                                <option value="price_desc" data-text-el="Τιμή (Φθίνουσα)" data-text-en="Price (High to Low)">Τιμή (Φθίνουσα)</option>
+                                <option value="availability" data-text-el="Διαθεσιμότητα" data-text-en="Availability">Διαθεσιμότητα</option>
+                                <option value="newest" data-text-el="Νεότερα πρώτα" data-text-en="Newest First">Νεότερα πρώτα</option>
                             </select>
                         </div>
                     </div>
