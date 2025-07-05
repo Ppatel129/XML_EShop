@@ -289,3 +289,29 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error getting facets: {e}")
             return {}
+    
+    async def search_categories(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search categories by name"""
+        try:
+            stmt = select(Category.name, func.count(Product.id).label('count')).join(
+                Product, Category.id == Product.category_id
+            ).where(
+                Category.name.ilike(f"%{query}%")
+            ).group_by(Category.name).order_by(
+                func.count(Product.id).desc()
+            ).limit(limit)
+            
+            result = await self.db.execute(stmt)
+            categories = []
+            
+            for row in result.fetchall():
+                categories.append({
+                    "name": row.name,
+                    "count": row.count
+                })
+            
+            return categories
+            
+        except Exception as e:
+            logger.error(f"Error searching categories: {e}")
+            return []

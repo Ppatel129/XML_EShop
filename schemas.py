@@ -143,6 +143,7 @@ class SearchResponse(BaseModel):
     total_pages: int
     filters_applied: Dict[str, Any]
     execution_time_ms: float
+    facets: Optional[Dict[str, Any]] = None
 
 class FeedProcessResult(BaseModel):
     shop_name: str

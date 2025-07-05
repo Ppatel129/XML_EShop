@@ -90,6 +90,18 @@ This is a scalable e-commerce product search system built with FastAPI and Postg
 
 ## Changelog
 
+- July 05, 2025. Modern e-commerce search system implemented
+  - Complete UI/UX overhaul following BestPrice.gr and Skroutz.gr patterns
+  - Left sidebar filters with price range slider (noUiSlider integration)
+  - Elasticsearch integration with PostgreSQL fallback for scalability
+  - Real-time search suggestions and autocomplete functionality
+  - Category search with product counts and smart filtering
+  - Mobile-responsive design with touch-friendly interface
+  - Advanced product handling: multiple shops, default images, stock display
+  - Search all fields: titles, descriptions, brands, categories, EAN, MPN
+  - Performance optimized for 5,000+ XML feeds processing
+  - AI-ready architecture for future OpenAI integration
+
 - July 04, 2025. XML parsing completely fixed - prices and stock now working
   - Fixed XML field mappings to match actual feed structure (price_with_vat, quantity, instock)
   - Added Greek text support for availability status parsing

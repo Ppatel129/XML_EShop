@@ -14,7 +14,8 @@ from schemas import (
 from search_service import SearchService
 from feed_scheduler import FeedProcessor, scheduler
 from config import settings
-from typing import List, Optional
+from elasticsearch_service import elasticsearch_service
+from typing import List, Optional, Dict, Any
 import uvicorn
 
 # Configure logging
@@ -32,6 +33,12 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("Database initialized")
         
+        # Initialize Elasticsearch
+        es_connected = await elasticsearch_service.connect()
+        if es_connected:
+            await elasticsearch_service.create_index()
+            logger.info("Elasticsearch initialized")
+        
         # Start background feed scheduler
         asyncio.create_task(scheduler.start())
         logger.info("Feed scheduler started")
@@ -40,6 +47,7 @@ async def lifespan(app: FastAPI):
     finally:
         # Cleanup
         scheduler.stop()
+        await elasticsearch_service.close()
         await close_db()
         logger.info("Application shutdown complete")
 
@@ -69,6 +77,7 @@ async def admin():
 
 @app.get("/search", response_model=SearchResponse)
 async def search_products(
+    q: Optional[str] = Query(None, description="Search query"),
     title: Optional[str] = Query(None, description="Search in product title"),
     brand: Optional[str] = Query(None, description="Filter by brand"),
     category: Optional[str] = Query(None, description="Filter by category"),
@@ -80,14 +89,56 @@ async def search_products(
     shop: Optional[str] = Query(None, description="Filter by shop"),
     color: Optional[str] = Query(None, description="Filter by color"),
     size: Optional[str] = Query(None, description="Filter by size"),
+    sort: Optional[str] = Query("relevance", description="Sort order"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(50, ge=1, le=100, description="Results per page"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Search products with filters"""
+    """Search products with modern features and Elasticsearch support"""
     try:
+        # Try Elasticsearch first for better performance
+        if elasticsearch_service.client:
+            search_query = q or title or ""
+            filters_dict = {
+                "brand": brand,
+                "category": category,
+                "min_price": min_price,
+                "max_price": max_price,
+                "availability": availability,
+                "ean": ean,
+                "mpn": mpn,
+                "shop": shop,
+                "color": color,
+                "size": size,
+                "sort": sort
+            }
+            
+            # Remove None values
+            filters_dict = {k: v for k, v in filters_dict.items() if v is not None}
+            
+            es_results = await elasticsearch_service.search_products(
+                query=search_query,
+                filters=filters_dict,
+                page=page,
+                per_page=per_page
+            )
+            
+            if es_results["products"]:
+                # Convert to SearchResponse format
+                return SearchResponse(
+                    products=es_results["products"],
+                    total=es_results["total"],
+                    page=page,
+                    per_page=per_page,
+                    total_pages=(es_results["total"] + per_page - 1) // per_page,
+                    filters_applied=filters_dict,
+                    execution_time_ms=es_results.get("took", 0),
+                    facets=es_results.get("aggregations", {})
+                )
+        
+        # Fallback to PostgreSQL search
         filters = SearchFilters(
-            title=title,
+            title=q or title,
             brand=brand,
             category=category,
             min_price=min_price,
@@ -108,6 +159,30 @@ async def search_products(
     except Exception as e:
         logger.error(f"Search error: {e}")
         raise HTTPException(status_code=500, detail="Search service error")
+
+@app.get("/categories/search")
+async def search_categories(
+    q: str = Query(..., min_length=2, description="Search query"),
+    limit: int = Query(10, ge=1, le=20, description="Maximum categories"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Search categories with Elasticsearch support"""
+    try:
+        # Try Elasticsearch first
+        if elasticsearch_service.client:
+            categories = await elasticsearch_service.search_categories(q, limit)
+            if categories:
+                return categories
+        
+        # Fallback to PostgreSQL category search
+        search_service = SearchService(db)
+        categories = await search_service.search_categories(q, limit)
+        
+        return categories
+        
+    except Exception as e:
+        logger.error(f"Category search error: {e}")
+        raise HTTPException(status_code=500, detail="Category search service error")
 
 @app.get("/product/{ean}", response_model=ProductSchema)
 async def get_product_by_ean(
@@ -136,12 +211,19 @@ async def get_search_suggestions(
     limit: int = Query(10, ge=1, le=20, description="Maximum suggestions"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Get search suggestions"""
+    """Get search suggestions with Elasticsearch fallback"""
     try:
+        # Try Elasticsearch first
+        if elasticsearch_service.client:
+            suggestions = await elasticsearch_service.get_suggestions(q, limit)
+            if suggestions:
+                return suggestions
+        
+        # Fallback to PostgreSQL
         search_service = SearchService(db)
         suggestions = await search_service.get_search_suggestions(q, limit)
         
-        return {"suggestions": suggestions}
+        return suggestions
         
     except Exception as e:
         logger.error(f"Error getting suggestions: {e}")

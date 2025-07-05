@@ -1,157 +1,729 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="el">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-commerce Product Search</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>E-commerce Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="/static/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #f8fafc;
+            --border-color: #e2e8f0;
+            --text-muted: #64748b;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .search-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 0;
+            margin-bottom: 40px;
+        }
+
+        .search-hero h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        .search-hero .lead {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-search {
+            height: 56px;
+            border: none;
+            border-radius: 28px;
+            font-size: 16px;
+            padding: 0 60px 0 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            background: white;
+        }
+
+        .main-search:focus {
+            outline: none;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            height: 40px;
+            width: 40px;
+            border-radius: 20px;
+            border: none;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .suggestion-item:hover {
+            background: #f8fafc;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-icon {
+            color: var(--text-muted);
+            width: 16px;
+        }
+
+        .filter-sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .filter-section {
+            margin-bottom: 32px;
+        }
+
+        .filter-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #1e293b;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            cursor: pointer;
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-color);
+        }
+
+        .filter-option label {
+            font-size: 14px;
+            color: #475569;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .filter-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .price-range-container {
+            margin-top: 16px;
+        }
+
+        .price-inputs {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .price-input {
+            flex: 1;
+            height: 36px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 14px;
+        }
+
+        .results-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .results-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .results-count {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .results-meta {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sort-select {
+            height: 36px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 14px;
+            min-width: 160px;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 24px;
+        }
+
+        .product-card {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            background: white;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .product-image .placeholder-icon {
+            font-size: 48px;
+            color: var(--text-muted);
+        }
+
+        .product-info {
+            padding: 16px;
+        }
+
+        .product-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+        }
+
+        .product-original-price {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+            margin-left: 8px;
+        }
+
+        .product-discount {
+            background: var(--warning-color);
+            color: white;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .product-shop {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .product-availability {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .available {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .unavailable {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .stock-info {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .pagination-container {
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .pagination .page-link {
+            border: 1px solid var(--border-color);
+            color: var(--primary-color);
+            padding: 8px 16px;
+        }
+
+        .pagination .page-link:hover {
+            background: var(--secondary-color);
+            border-color: var(--primary-color);
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary-color);
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--text-muted);
+        }
+
+        .no-results i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .mobile-filter-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .search-hero {
+                padding: 40px 0;
+            }
+
+            .search-hero h1 {
+                font-size: 2rem;
+            }
+
+            .filter-sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                z-index: 1050;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+
+            .filter-sidebar.show {
+                left: 0;
+            }
+
+            .mobile-filter-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .product-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 16px;
+                padding: 16px;
+            }
+
+            .results-header {
+                padding: 16px;
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+        }
+
+        .filter-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1040;
+        }
+
+        .clear-filters {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 16px;
+            width: 100%;
+        }
+
+        .clear-filters:hover {
+            background: var(--secondary-color);
+        }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .filter-tag {
+            background: var(--primary-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .filter-tag .remove {
+            cursor: pointer;
+            margin-left: 4px;
+        }
+
+        .category-results {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .category-header {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .category-list {
+            padding: 16px 24px;
+        }
+
+        .category-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-item:hover {
+            background: #f8fafc;
+            margin: 0 -24px;
+            padding: 12px 24px;
+        }
+
+        .category-item:last-child {
+            border-bottom: none;
+        }
+
+        .category-name {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .category-count {
+            font-size: 14px;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+
+        .search-stats {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .search-speed {
+            font-weight: 500;
+            color: var(--success-color);
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <!-- Search Hero Section -->
+    <div class="search-hero">
         <div class="container">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-search me-2"></i>
-                Product Search
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showStats()">
-                            <i class="fas fa-chart-bar me-1"></i>
-                            Stats
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin">
-                            <i class="fas fa-cog me-1"></i>
-                            Admin
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <!-- Search Section -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">
-                            <i class="fas fa-search me-2"></i>
-                            Product Search
-                        </h5>
-                        <form id="searchForm">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label">Search Products</label>
-                                    <input type="text" class="form-control" id="title" placeholder="Enter product name...">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Brand</label>
-                                    <input type="text" class="form-control" id="brand" placeholder="Brand name">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Category</label>
-                                    <input type="text" class="form-control" id="category" placeholder="Category">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Min Price (€)</label>
-                                    <input type="number" class="form-control" id="minPrice" placeholder="0" min="0" step="0.01">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Max Price (€)</label>
-                                    <input type="number" class="form-control" id="maxPrice" placeholder="1000" min="0" step="0.01">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Shop</label>
-                                    <select class="form-select" id="shop">
-                                        <option value="">All Shops</option>
-                                        <option value="ekos">Ekos</option>
-                                        <option value="beq">BEQ</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Availability</label>
-                                    <select class="form-select" id="availability">
-                                        <option value="">All</option>
-                                        <option value="true">Available</option>
-                                        <option value="false">Out of Stock</option>
-                                    </select>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search me-2"></i>
-                                        Search
-                                    </button>
-                                    <button type="button" class="btn btn-secondary ms-2" onclick="clearSearch()">
-                                        <i class="fas fa-times me-2"></i>
-                                        Clear
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
+            <div class="text-center">
+                <h1>Βρες τα καλύτερα προϊόντα</h1>
+                <p class="lead">Συγκρίνει τιμές από χιλιάδες ηλεκτρονικά καταστήματα</p>
+                
+                <div class="search-container mt-4">
+                    <input type="text" class="form-control main-search" id="mainSearch" 
+                           placeholder="Αναζήτηση προϊόντων..." autocomplete="off">
+                    <button class="search-btn" id="searchBtn">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Search Results -->
+    <!-- Main Content -->
+    <div class="container-fluid">
         <div class="row">
-            <div class="col-12">
-                <div id="searchResults">
-                    <!-- Search results will be displayed here -->
+            <!-- Left Sidebar Filters -->
+            <div class="col-lg-3 col-md-4 mb-4">
+                <div class="filter-sidebar" id="filterSidebar">
+                    <div class="d-flex justify-content-between align-items-center mb-3 d-md-none">
+                        <h5 class="mb-0">Φίλτρα</h5>
+                        <button class="btn btn-sm btn-outline-secondary" id="closeMobileFilters">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="active-filters" id="activeFilters"></div>
+
+                    <!-- Price Range Filter -->
+                    <div class="filter-section">
+                        <div class="filter-title">
+                            <i class="fas fa-euro-sign me-2"></i>Τιμή
+                        </div>
+                        <div class="price-range-container">
+                            <div id="priceRangeSlider"></div>
+                            <div class="price-inputs">
+                                <input type="number" class="price-input" id="minPrice" placeholder="Από">
+                                <input type="number" class="price-input" id="maxPrice" placeholder="Έως">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Availability Filter -->
+                    <div class="filter-section">
+                        <div class="filter-title">
+                            <i class="fas fa-check-circle me-2"></i>Διαθεσιμότητα
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="availableOnly" value="true">
+                            <label for="availableOnly">Μόνο διαθέσιμα</label>
+                        </div>
+                        <div class="filter-option">
+                            <input type="checkbox" id="inStock" value="true">
+                            <label for="inStock">Άμεσα διαθέσιμα</label>
+                        </div>
+                    </div>
+
+                    <!-- Brand Filter -->
+                    <div class="filter-section">
+                        <div class="filter-title">
+                            <i class="fas fa-tag me-2"></i>Μάρκα
+                        </div>
+                        <div id="brandFilters"></div>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="filter-section">
+                        <div class="filter-title">
+                            <i class="fas fa-layer-group me-2"></i>Κατηγορία
+                        </div>
+                        <div id="categoryFilters"></div>
+                    </div>
+
+                    <!-- Shop Filter -->
+                    <div class="filter-section">
+                        <div class="filter-title">
+                            <i class="fas fa-store me-2"></i>Κατάστημα
+                        </div>
+                        <div id="shopFilters"></div>
+                    </div>
+
+                    <button class="clear-filters" id="clearFilters">
+                        <i class="fas fa-undo me-2"></i>Καθαρισμός φίλτρων
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="text-center py-4" style="display: none;">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+            <!-- Results Column -->
+            <div class="col-lg-9 col-md-8">
+                <!-- Category Results (shown when searching categories) -->
+                <div class="category-results" id="categoryResults" style="display: none;">
+                    <div class="category-header">
+                        <i class="fas fa-layer-group me-2"></i>Κατηγορίες
+                    </div>
+                    <div class="category-list" id="categoryList"></div>
+                </div>
+
+                <!-- Product Results -->
+                <div class="results-container" id="resultsContainer">
+                    <div class="search-stats" id="searchStats" style="display: none;"></div>
+                    
+                    <div class="results-header" id="resultsHeader">
+                        <div>
+                            <div class="results-count" id="resultsCount">Αναζήτηση προϊόντων...</div>
+                            <div class="results-meta" id="resultsMeta"></div>
+                        </div>
+                        <div class="sort-controls">
+                            <select class="sort-select" id="sortSelect">
+                                <option value="relevance">Σχετικότητα</option>
+                                <option value="price_asc">Τιμή (Αύξουσα)</option>
+                                <option value="price_desc">Τιμή (Φθίνουσα)</option>
+                                <option value="availability">Διαθεσιμότητα</option>
+                                <option value="newest">Νεότερα πρώτα</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="loading-spinner" id="loadingSpinner">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Φόρτωση...</span>
+                        </div>
+                        <div class="mt-3">Αναζήτηση προϊόντων...</div>
+                    </div>
+
+                    <div class="no-results" id="noResults" style="display: none;">
+                        <i class="fas fa-search"></i>
+                        <h5>Δεν βρέθηκαν αποτελέσματα</h5>
+                        <p>Δοκιμάστε διαφορετικούς όρους αναζήτησης ή καθαρίστε τα φίλτρα</p>
+                    </div>
+
+                    <div class="product-grid" id="productGrid"></div>
+
+                    <div class="pagination-container" id="paginationContainer"></div>
+                </div>
             </div>
-            <p class="mt-2">Searching products...</p>
         </div>
     </div>
 
-    <!-- Product Detail Modal -->
-    <div class="modal fade" id="productModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Product Details</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="productModalBody">
-                    <!-- Product details will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Mobile Filter Button -->
+    <button class="mobile-filter-btn" id="mobileFilterBtn">
+        <i class="fas fa-filter"></i>
+    </button>
 
-    <!-- Stats Modal -->
-    <div class="modal fade" id="statsModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">System Statistics</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="statsModalBody">
-                    <!-- Stats will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Mobile Filter Backdrop -->
+    <div class="filter-backdrop" id="filterBackdrop"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="/static/app.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.js"></script>
+    <script src="/static/modern-search.js"></script>
 </body>
 </html>
