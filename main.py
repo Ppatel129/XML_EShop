@@ -184,7 +184,28 @@ async def search_categories(
         logger.error(f"Category search error: {e}")
         raise HTTPException(status_code=500, detail="Category search service error")
 
-@app.get("/product/{ean}", response_model=ProductSchema)
+@app.get("/product/{product_id}", response_model=ProductSchema)
+async def get_product_by_id(
+    product_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get product by ID"""
+    try:
+        search_service = SearchService(db)
+        product = await search_service.get_product_by_id(product_id)
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        return product
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting product by ID {product_id}: {e}")
+        raise HTTPException(status_code=500, detail="Product retrieval error")
+
+@app.get("/product/ean/{ean}", response_model=ProductSchema)
 async def get_product_by_ean(
     ean: str,
     db: AsyncSession = Depends(get_db)

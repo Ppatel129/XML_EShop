@@ -185,6 +185,27 @@ class SearchService:
                 execution_time_ms=round(execution_time, 2)
             )
     
+    async def get_product_by_id(self, product_id: int) -> Optional[ProductSchema]:
+        """Get product by ID"""
+        try:
+            query = select(Product).options(
+                selectinload(Product.shop),
+                selectinload(Product.brand),
+                selectinload(Product.category),
+                selectinload(Product.variants)
+            ).where(Product.id == product_id)
+            
+            result = await self.db.execute(query)
+            product = result.scalar_one_or_none()
+            
+            if product:
+                return ProductSchema.from_orm(product)
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting product by ID {product_id}: {e}")
+            return None
+
     async def get_product_by_ean(self, ean: str) -> Optional[ProductSchema]:
         """Get product by EAN code"""
         try:
