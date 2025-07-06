@@ -308,4 +308,43 @@
         .no-results {
             text-align: center;
             padding: 60px 24px;
-            color: var(--text-
+            color: var(--text-muted);
+        }
+
+        .clear-filters {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .clear-filters:hover {
+            background: var(--secondary-color);
+        }
+
+        .filter-show-more {
+            width: 100%;
+            background: none;
+            border: 1px dashed var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .filter-show-more:hover {
+            background: var(--secondary-color);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }

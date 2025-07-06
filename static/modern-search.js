@@ -40,6 +40,11 @@ class ModernSearchApp {
         this.suggestionTimeout = null;
         this.lastSearchTime = 0;
 
+        // Filter pagination state
+        this.brandFilterPage = 1;
+        this.categoryFilterPage = 1;
+        this.itemsPerFilterPage = 10;
+
         this.init();
     }
 
@@ -394,12 +399,36 @@ class ModernSearchApp {
     }
 
     createProductCard(product) {
-        const price = product.price ? `€${product.price.toFixed(2)}` : 'Not available';
-        const originalPrice = product.original_price && product.original_price > product.price ? 
-            `<span class="product-original-price">€${product.original_price.toFixed(2)}</span>` : '';
+        // Handle different price formats - check for aggregated vs regular products
+        let price = 'Price not available';
+        let originalPrice = '';
+        let discount = '';
 
-        const discount = product.original_price && product.original_price > product.price ?
-            `<span class="product-discount">-${Math.round(((product.original_price - product.price) / product.original_price) * 100)}%</span>` : '';
+        if (product.best_available_price) {
+            // Aggregated product
+            price = `€${product.best_available_price.toFixed(2)}`;
+            if (product.min_price !== product.max_price) {
+                price += ` - €${product.max_price.toFixed(2)}`;
+            }
+        } else if (product.price) {
+            // Regular product
+            if (typeof product.price === 'number') {
+                price = `€${product.price.toFixed(2)}`;
+            } else if (typeof product.price === 'string' && product.price.includes('€')) {
+                price = product.price;
+            } else {
+                const numPrice = parseFloat(product.price);
+                if (!isNaN(numPrice)) {
+                    price = `€${numPrice.toFixed(2)}`;
+                }
+            }
+
+            // Original price and discount for regular products
+            if (product.original_price && product.original_price > parseFloat(product.price)) {
+                originalPrice = `<span class="product-original-price">€${product.original_price.toFixed(2)}</span>`;
+                discount = `<span class="product-discount">-${Math.round(((product.original_price - parseFloat(product.price)) / product.original_price) * 100)}%</span>`;
+            }
+        }
 
         const availability = product.availability ? 
             '<span class="product-availability available">Available</span>' : 
@@ -408,15 +437,19 @@ class ModernSearchApp {
         const stockInfo = product.stock_quantity ? 
             `<div class="stock-info">Stock: ${product.stock_quantity}</div>` : '';
 
+        // Handle aggregated vs regular product shop count
+        const shopInfo = product.shop_count ? 
+            `<div class="product-shop">${product.shop_count} shops</div>` :
+            (product.shop ? `<div class="product-shop">${product.shop.name || product.shop}</div>` : '');
+
         const imageUrl = product.image_url || '';
         const imageContent = imageUrl ? 
             `<img src="${imageUrl}" alt="${product.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <div class="placeholder-icon" style="display: none;"><i class="fas fa-image"></i></div>` :
             `<div class="placeholder-icon"><i class="fas fa-image"></i></div>`;
 
-        const brandName = product.brand ? product.brand.name : '';
-        const categoryName = product.category ? product.category.name : '';
-        const shopName = product.shop ? product.shop.name : '';
+        const brandName = product.brand ? (product.brand.name || product.brand) : '';
+        const categoryName = product.category ? (product.category.name || product.category) : '';
 
         return `
             <div class="product-card" onclick="app.showProductDetails(${product.id})">
@@ -431,7 +464,7 @@ class ModernSearchApp {
                         ${discount}
                     </div>
                     <div class="product-meta">
-                        <div class="product-shop">${shopName}</div>
+                        ${shopInfo}
                         ${availability}
                     </div>
                     ${stockInfo}
@@ -500,58 +533,17 @@ class ModernSearchApp {
     }
 
     updateFacets(facets) {
-        // Update brand filters with search
+        // Store complete facets data
+        this.facetsData = facets;
+
+        // Update brand filters with search and pagination
         if (facets.brands && facets.brands.length > 0) {
-            this.brandFilters.innerHTML = `
-                <div class="filter-search">
-                    <input type="text" id="brandSearch" placeholder="Search brands..." 
-                           onkeyup="app.filterBrands(this.value)">
-                </div>
-                <div class="filter-options" id="brandOptions">
-                    ${facets.brands.map(brand => {
-                        const brandKey = brand.key || brand.name || brand;
-                        const brandCount = brand.doc_count || brand.count || 0;
-                        const safeKey = String(brandKey).replace(/'/g, "\\'");
-                        const isSelected = this.currentFilters.brands && this.currentFilters.brands.includes(brandKey);
-                        return `
-                            <div class="filter-option" data-brand="${brandKey.toLowerCase()}">
-                                <input type="checkbox" id="brand-${brandKey}" value="${brandKey}" 
-                                       ${isSelected ? 'checked' : ''}
-                                       onchange="app.handleBrandFilter('${safeKey}', this.checked)">
-                                <label for="brand-${brandKey}">${brandKey}</label>
-                                <span class="filter-count">${brandCount}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+            this.updateBrandFilters(facets.brands);
         }
 
-        // Update category filters with search
+        // Update category filters with search and pagination
         if (facets.categories && facets.categories.length > 0) {
-            this.categoryFilters.innerHTML = `
-                <div class="filter-search">
-                    <input type="text" id="categorySearch" placeholder="Search categories..." 
-                           onkeyup="app.filterCategories(this.value)">
-                </div>
-                <div class="filter-options" id="categoryOptions">
-                    ${facets.categories.map(category => {
-                        const categoryKey = category.key || category.name || category;
-                        const categoryCount = category.doc_count || category.count || 0;
-                        const safeKey = String(categoryKey).replace(/'/g, "\\'");
-                        const isSelected = this.currentFilters.categories && this.currentFilters.categories.includes(categoryKey);
-                        return `
-                            <div class="filter-option" data-category="${categoryKey.toLowerCase()}">
-                                <input type="checkbox" id="category-${categoryKey}" value="${categoryKey}"
-                                       ${isSelected ? 'checked' : ''}
-                                       onchange="app.handleCategoryFilter('${safeKey}', this.checked)">
-                                <label for="category-${categoryKey}">${categoryKey}</label>
-                                <span class="filter-count">${categoryCount}</span>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
+            this.updateCategoryFilters(facets.categories);
         }
 
         // Update shop filters
@@ -588,6 +580,84 @@ class ModernSearchApp {
                 ]
             });
         }
+    }
+
+    updateBrandFilters(brands) {
+        const visibleBrands = brands.slice(0, this.brandFilterPage * this.itemsPerFilterPage);
+        const hasMore = brands.length > this.brandFilterPage * this.itemsPerFilterPage;
+        
+        this.brandFilters.innerHTML = `
+            <div class="filter-search">
+                <input type="text" id="brandSearch" placeholder="Search brands..." 
+                       onkeyup="app.filterBrands(this.value)">
+            </div>
+            <div class="filter-options" id="brandOptions">
+                ${visibleBrands.map(brand => {
+                    const brandKey = brand.key || brand.name || brand;
+                    const brandCount = brand.doc_count || brand.count || 0;
+                    const safeKey = String(brandKey).replace(/'/g, "\\'");
+                    const isSelected = this.currentFilters.brands && this.currentFilters.brands.includes(brandKey);
+                    return `
+                        <div class="filter-option" data-brand="${brandKey.toLowerCase()}">
+                            <input type="checkbox" id="brand-${brandKey}" value="${brandKey}" 
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="app.handleBrandFilter('${safeKey}', this.checked)">
+                            <label for="brand-${brandKey}">${brandKey}</label>
+                            <span class="filter-count">${brandCount}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            ${hasMore ? `
+                <button class="filter-show-more" onclick="app.showMoreBrands()">
+                    <i class="fas fa-chevron-down me-1"></i>Show more (${brands.length - visibleBrands.length} more)
+                </button>
+            ` : ''}
+        `;
+    }
+
+    updateCategoryFilters(categories) {
+        const visibleCategories = categories.slice(0, this.categoryFilterPage * this.itemsPerFilterPage);
+        const hasMore = categories.length > this.categoryFilterPage * this.itemsPerFilterPage;
+        
+        this.categoryFilters.innerHTML = `
+            <div class="filter-search">
+                <input type="text" id="categorySearch" placeholder="Search categories..." 
+                       onkeyup="app.filterCategories(this.value)">
+            </div>
+            <div class="filter-options" id="categoryOptions">
+                ${visibleCategories.map(category => {
+                    const categoryKey = category.key || category.name || category;
+                    const categoryCount = category.doc_count || category.count || 0;
+                    const safeKey = String(categoryKey).replace(/'/g, "\\'");
+                    const isSelected = this.currentFilters.categories && this.currentFilters.categories.includes(categoryKey);
+                    return `
+                        <div class="filter-option" data-category="${categoryKey.toLowerCase()}">
+                            <input type="checkbox" id="category-${categoryKey}" value="${categoryKey}"
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="app.handleCategoryFilter('${safeKey}', this.checked)">
+                            <label for="category-${categoryKey}">${categoryKey}</label>
+                            <span class="filter-count">${categoryCount}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            ${hasMore ? `
+                <button class="filter-show-more" onclick="app.showMoreCategories()">
+                    <i class="fas fa-chevron-down me-1"></i>Show more (${categories.length - visibleCategories.length} more)
+                </button>
+            ` : ''}
+        `;
+    }
+
+    showMoreBrands() {
+        this.brandFilterPage++;
+        this.updateBrandFilters(this.facetsData.brands);
+    }
+
+    showMoreCategories() {
+        this.categoryFilterPage++;
+        this.updateCategoryFilters(this.facetsData.categories);
     }
 
     handleBrandFilter(brand, checked) {
@@ -761,6 +831,10 @@ class ModernSearchApp {
 
     clearAllFilters() {
         this.currentFilters = {};
+
+        // Reset pagination
+        this.brandFilterPage = 1;
+        this.categoryFilterPage = 1;
 
         // Reset form elements
         document.querySelectorAll('.filter-option input[type="checkbox"]').forEach(checkbox => {
