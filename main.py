@@ -82,6 +82,8 @@ async def unified_search(
     title: Optional[str] = Query(None, description="Search in product title"),
     brand: Optional[str] = Query(None, description="Filter by brand"),
     category: Optional[str] = Query(None, description="Filter by category"),
+    brands: Optional[List[str]] = Query(None, description="Filter by multiple brands"),
+    categories: Optional[List[str]] = Query(None, description="Filter by multiple categories"),
     min_price: Optional[float] = Query(None, ge=0, description="Minimum price"),
     max_price: Optional[float] = Query(None, ge=0, description="Maximum price"),
     availability: Optional[bool] = Query(None, description="Filter by availability"),
@@ -98,11 +100,13 @@ async def unified_search(
     try:
         search_service = SearchService(db)
         
-        # Build filters - handle multi-select brands and categories
+        # Build filters - handle both single and multi-select
         filters = SearchFilters(
             title=q or title,
             brand=brand,
             category=category,
+            brands=brands,
+            categories=categories,
             min_price=min_price,
             max_price=max_price,
             availability=availability,
@@ -111,12 +115,6 @@ async def unified_search(
             color=color,
             size=size
         )
-        
-        # Handle multi-select filters from query parameters
-        if 'brands' in request.query_params:
-            filters.brands = request.query_params.getlist('brands')
-        if 'categories' in request.query_params:
-            filters.categories = request.query_params.getlist('categories')
         
         if type == "categories":
             # Search only categories
