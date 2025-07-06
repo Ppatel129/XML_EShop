@@ -46,8 +46,37 @@ class ModernSearchApp {
     init() {
         this.setupEventListeners();
         this.setupPriceRangeSlider();
+        this.initializeLanguage();
         this.loadInitialData();
         this.performInitialSearch();
+    }
+
+    initializeLanguage() {
+        // Set English as default language
+        document.getElementById('languageSelect').value = 'en';
+        this.switchLanguage('en');
+    }
+
+    switchLanguage(lang) {
+        // Update all elements with language data attributes
+        document.querySelectorAll('[data-text-el][data-text-en]').forEach(element => {
+            if (lang === 'el') {
+                element.textContent = element.getAttribute('data-text-el');
+            } else {
+                element.textContent = element.getAttribute('data-text-en');
+            }
+        });
+
+        // Update placeholders
+        const searchInput = document.getElementById('mainSearch');
+        if (lang === 'el') {
+            searchInput.placeholder = searchInput.getAttribute('data-placeholder-el');
+        } else {
+            searchInput.placeholder = searchInput.getAttribute('data-placeholder-en');
+        }
+
+        // Update HTML lang attribute
+        document.documentElement.lang = lang;
     }
 
     setupEventListeners() {
@@ -110,6 +139,11 @@ class ModernSearchApp {
         document.getElementById('sortSelect').addEventListener('change', (e) => {
             this.currentFilters.sort = e.target.value;
             this.performSearch();
+        });
+
+        // Language selector
+        document.getElementById('languageSelect').addEventListener('change', (e) => {
+            this.switchLanguage(e.target.value);
         });
 
         // Availability filters
@@ -303,7 +337,7 @@ class ModernSearchApp {
         this.categoryList.innerHTML = categories.map(category => `
             <div class="category-item" onclick="app.selectCategory('${category.name.replace(/'/g, "\\'")}')">
                 <div class="category-name">${category.name}</div>
-                <div class="category-count">${category.count} προϊόντα</div>
+                <div class="category-count">${category.count} products</div>
             </div>
         `).join('');
 
@@ -320,8 +354,8 @@ class ModernSearchApp {
         const { products, total, page, per_page, total_pages } = data;
 
         // Update results count
-        this.resultsCount.textContent = `${total.toLocaleString()} αποτελέσματα`;
-        this.resultsMeta.textContent = `Σελίδα ${page} από ${total_pages}`;
+        this.resultsCount.textContent = `${total.toLocaleString()} results`;
+        this.resultsMeta.textContent = `Page ${page} of ${total_pages}`;
 
         if (products.length === 0) {
             this.showNoResults();
@@ -345,7 +379,7 @@ class ModernSearchApp {
     }
 
     createProductCard(product) {
-        const price = product.price ? `€${product.price.toFixed(2)}` : 'Μη διαθέσιμη';
+        const price = product.price ? `€${product.price.toFixed(2)}` : 'Not available';
         const originalPrice = product.original_price && product.original_price > product.price ? 
             `<span class="product-original-price">€${product.original_price.toFixed(2)}</span>` : '';
 
@@ -353,11 +387,11 @@ class ModernSearchApp {
             `<span class="product-discount">-${Math.round(((product.original_price - product.price) / product.original_price) * 100)}%</span>` : '';
 
         const availability = product.availability ? 
-            '<span class="product-availability available">Διαθέσιμο</span>' : 
-            '<span class="product-availability unavailable">Μη διαθέσιμο</span>';
+            '<span class="product-availability available">Available</span>' : 
+            '<span class="product-availability unavailable">Not available</span>';
 
         const stockInfo = product.stock_quantity ? 
-            `<div class="stock-info">Απόθεμα: ${product.stock_quantity}</div>` : '';
+            `<div class="stock-info">Stock: ${product.stock_quantity}</div>` : '';
 
         const imageUrl = product.image_url || '';
         const imageContent = imageUrl ? 
@@ -433,7 +467,7 @@ class ModernSearchApp {
     }
 
     updateSearchStats(data, searchTime) {
-        const stats = `Βρέθηκαν <span class="search-speed">${data.total.toLocaleString()}</span> αποτελέσματα σε <span class="search-speed">${searchTime}ms</span>`;
+        const stats = `Found <span class="search-speed">${data.total.toLocaleString()}</span> results in <span class="search-speed">${searchTime}ms</span>`;
         this.searchStats.innerHTML = stats;
         this.searchStats.style.display = 'block';
     }
@@ -546,7 +580,7 @@ class ModernSearchApp {
             activeFilters.push({
                 type: 'brand',
                 value: this.currentFilters.brand,
-                label: `Μάρκα: ${this.currentFilters.brand}`
+                label: `Brand: ${this.currentFilters.brand}`
             });
         }
 
@@ -554,7 +588,7 @@ class ModernSearchApp {
             activeFilters.push({
                 type: 'category',
                 value: this.currentFilters.category,
-                label: `Κατηγορία: ${this.currentFilters.category}`
+                label: `Category: ${this.currentFilters.category}`
             });
         }
 
@@ -562,7 +596,7 @@ class ModernSearchApp {
             activeFilters.push({
                 type: 'shop',
                 value: this.currentFilters.shop,
-                label: `Κατάστημα: ${this.currentFilters.shop}`
+                label: `Shop: ${this.currentFilters.shop}`
             });
         }
 
@@ -570,7 +604,7 @@ class ModernSearchApp {
             activeFilters.push({
                 type: 'availability',
                 value: this.currentFilters.availability,
-                label: 'Μόνο διαθέσιμα'
+                label: 'Available only'
             });
         }
 
@@ -580,7 +614,7 @@ class ModernSearchApp {
             activeFilters.push({
                 type: 'price',
                 value: 'price',
-                label: `Τιμή: €${minPrice} - €${maxPrice}`
+                label: `Price: €${minPrice} - €${maxPrice}`
             });
         }
 
@@ -675,7 +709,7 @@ class ModernSearchApp {
     showError(message) {
         console.error(message);
         this.showLoading(false);
-        this.resultsCount.textContent = 'Σφάλμα αναζήτησης';
+        this.resultsCount.textContent = 'Search error';
         this.resultsMeta.textContent = message;
         this.showNoResults();
     }
