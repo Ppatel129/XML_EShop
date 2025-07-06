@@ -87,12 +87,14 @@ class ModernSearchApp {
 
         this.searchInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.performSearch();
+                this.currentPage = 1;
+                this.performSearch(this.currentPage);
             }
         });
 
         this.searchBtn.addEventListener('click', () => {
-            this.performSearch();
+            this.currentPage = 1;
+            this.performSearch(this.currentPage);
         });
 
         // Suggestions dropdown
@@ -138,7 +140,8 @@ class ModernSearchApp {
         // Sort functionality
         document.getElementById('sortSelect').addEventListener('change', (e) => {
             this.currentFilters.sort = e.target.value;
-            this.performSearch();
+            this.currentPage = 1;
+            this.performSearch(this.currentPage);
         });
 
         // Language selector
@@ -283,6 +286,12 @@ class ModernSearchApp {
 
             if (this.currentQuery) {
                 params.append('q', this.currentQuery);
+            }
+
+            // Add sort parameter
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect && sortSelect.value) {
+                params.append('sort', sortSelect.value);
             }
 
             // Add filters
@@ -571,7 +580,8 @@ class ModernSearchApp {
 
     updateFilters() {
         this.updateActiveFilters();
-        this.performSearch();
+        this.currentPage = 1;
+        this.performSearch(this.currentPage);
     }
 
     updateActiveFilters() {
@@ -889,8 +899,6 @@ class ModernSearchApp {
     }
 
     displayUnifiedResults(data) {
-        const resultsContainer = document.getElementById('resultsContainer');
-
         if (data.type === 'unified') {
             // Display both products and categories
             let html = '';
@@ -915,11 +923,16 @@ class ModernSearchApp {
                     html += this.createAggregatedProductCard(product);
                 });
                 html += '</div></div>';
+                
+                // Update pagination for products
+                this.updatePagination(data.products.page, data.products.total_pages);
             }
 
-            resultsContainer.innerHTML = html;
+            this.resultsContainer.innerHTML = html;
+            this.noResults.style.display = 'none';
+            this.resultsContainer.style.display = 'block';
         } else {
-            // Handle single type results
+            // Handle single type results (products only)
             this.displayResults(data);
         }
     }
@@ -973,60 +986,3 @@ document.addEventListener('click', (e) => {
         e.preventDefault();
     }
 });
-async performSearch(query = '', page = 1) {
-        try {
-            this.showLoading(true);
-
-            // Build search parameters
-            const params = new URLSearchParams({
-                page: page,
-                per_page: this.itemsPerPage,
-                type: 'all'
-            });
-
-            if (query) {
-                params.append('q', query);
-            }
-
-            // Add sort parameter
-            const sortSelect = document.getElementById('sortSelect');
-            if (sortSelect && sortSelect.value) {
-                params.append('sort', sortSelect.value);
-            }
-
-            const response = await fetch(`/search?${params}`);
-            const data = await response.json();
-
-            if (data.type === 'unified') {
-                this.displayUnifiedResults(data);
-            } else {
-                this.displayResults(data);
-            }
-
-        } catch (error) {
-            console.error('Search error:', error);
-            this.showError('Σφάλμα κατά την αναζήτηση. Παρακαλώ δοκιμάστε ξανά.');
-        } finally {
-            this.showLoading(false);
-        }
-    }
-// Add event listeners
-        this.searchInput.addEventListener('input', (e) => {
-            this.handleSearchInput(e.target.value);
-        });
-
-        this.searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.currentPage = 1;
-                this.performSearch(e.target.value);
-            }
-        });
-
-        // Add sort change listener
-        const sortSelect = document.getElementById('sortSelect');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', () => {
-                this.currentPage = 1;
-                this.performSearch(this.searchInput.value);
-            });
-        }
