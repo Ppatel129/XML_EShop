@@ -344,12 +344,17 @@ class ModernSearchApp {
     }
 
     displayCategoryResults(categories) {
-        this.categoryList.innerHTML = categories.map(category => `
-            <div class="category-item" onclick="app.selectCategory('${category.name.replace(/'/g, "\\'")}')">
-                <div class="category-name">${category.name}</div>
-                <div class="category-count">${category.count} products</div>
-            </div>
-        `).join('');
+        this.categoryList.innerHTML = categories.map(category => {
+            const categoryName = category.name || category.key || category;
+            const categoryCount = category.total_products || category.unique_products || category.count || 0;
+            const safeName = String(categoryName).replace(/'/g, "\\'");
+            return `
+                <div class="category-item" onclick="app.selectCategory('${safeName}')">
+                    <div class="category-name">${categoryName}</div>
+                    <div class="category-count">${categoryCount} products</div>
+                </div>
+            `;
+        }).join('');
 
         this.categoryResults.style.display = 'block';
     }
@@ -477,7 +482,8 @@ class ModernSearchApp {
     }
 
     updateSearchStats(data, searchTime) {
-        const stats = `Found <span class="search-speed">${data.total.toLocaleString()}</span> results in <span class="search-speed">${searchTime}ms</span>`;
+        const total = data.total || (data.products && data.products.total) || 0;
+        const stats = `Found <span class="search-speed">${total.toLocaleString()}</span> results in <span class="search-speed">${searchTime}ms</span>`;
         this.searchStats.innerHTML = stats;
         this.searchStats.style.display = 'block';
     }
@@ -496,41 +502,56 @@ class ModernSearchApp {
     updateFacets(facets) {
         // Update brand filters
         if (facets.brands && facets.brands.length > 0) {
-            this.brandFilters.innerHTML = facets.brands.slice(0, 10).map(brand => `
-                <div class="filter-option">
-                    <input type="checkbox" id="brand-${brand.key}" value="${brand.key}" 
-                           ${this.currentFilters.brand === brand.key ? 'checked' : ''}
-                           onchange="app.handleBrandFilter('${brand.key.replace(/'/g, "\\'")}', this.checked)">
-                    <label for="brand-${brand.key}">${brand.key}</label>
-                    <span class="filter-count">${brand.doc_count}</span>
-                </div>
-            `).join('');
+            this.brandFilters.innerHTML = facets.brands.slice(0, 10).map(brand => {
+                const brandKey = brand.key || brand.name || brand;
+                const brandCount = brand.doc_count || brand.count || 0;
+                const safeKey = String(brandKey).replace(/'/g, "\\'");
+                return `
+                    <div class="filter-option">
+                        <input type="checkbox" id="brand-${brandKey}" value="${brandKey}" 
+                               ${this.currentFilters.brand === brandKey ? 'checked' : ''}
+                               onchange="app.handleBrandFilter('${safeKey}', this.checked)">
+                        <label for="brand-${brandKey}">${brandKey}</label>
+                        <span class="filter-count">${brandCount}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Update category filters
         if (facets.categories && facets.categories.length > 0) {
-            this.categoryFilters.innerHTML = facets.categories.slice(0, 10).map(category => `
-                <div class="filter-option">
-                    <input type="checkbox" id="category-${category.key}" value="${category.key}"
-                           ${this.currentFilters.category === category.key ? 'checked' : ''}
-                           onchange="app.handleCategoryFilter('${category.key.replace(/'/g, "\\'")}', this.checked)">
-                    <label for="category-${category.key}">${category.key}</label>
-                    <span class="filter-count">${category.doc_count}</span>
-                </div>
-            `).join('');
+            this.categoryFilters.innerHTML = facets.categories.slice(0, 10).map(category => {
+                const categoryKey = category.key || category.name || category;
+                const categoryCount = category.doc_count || category.count || 0;
+                const safeKey = String(categoryKey).replace(/'/g, "\\'");
+                return `
+                    <div class="filter-option">
+                        <input type="checkbox" id="category-${categoryKey}" value="${categoryKey}"
+                               ${this.currentFilters.category === categoryKey ? 'checked' : ''}
+                               onchange="app.handleCategoryFilter('${safeKey}', this.checked)">
+                        <label for="category-${categoryKey}">${categoryKey}</label>
+                        <span class="filter-count">${categoryCount}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Update shop filters
         if (facets.shops && facets.shops.length > 0) {
-            this.shopFilters.innerHTML = facets.shops.map(shop => `
-                <div class="filter-option">
-                    <input type="checkbox" id="shop-${shop.key}" value="${shop.key}"
-                           ${this.currentFilters.shop === shop.key ? 'checked' : ''}
-                           onchange="app.handleShopFilter('${shop.key.replace(/'/g, "\\'")}', this.checked)">
-                    <label for="shop-${shop.key}">${shop.key}</label>
-                    <span class="filter-count">${shop.doc_count}</span>
-                </div>
-            `).join('');
+            this.shopFilters.innerHTML = facets.shops.map(shop => {
+                const shopKey = shop.key || shop.name || shop;
+                const shopCount = shop.doc_count || shop.count || 0;
+                const safeKey = String(shopKey).replace(/'/g, "\\'");
+                return `
+                    <div class="filter-option">
+                        <input type="checkbox" id="shop-${shopKey}" value="${shopKey}"
+                               ${this.currentFilters.shop === shopKey ? 'checked' : ''}
+                               onchange="app.handleShopFilter('${safeKey}', this.checked)">
+                        <label for="shop-${shopKey}">${shopKey}</label>
+                        <span class="filter-count">${shopCount}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Update price range slider
@@ -906,26 +927,37 @@ class ModernSearchApp {
             if (data.categories && data.categories.length > 0) {
                 html += '<div class="categories-section"><h3>Categories</h3><div class="categories-grid">';
                 data.categories.forEach(category => {
+                    const categoryName = category.name || category.key || category;
+                    const productCount = category.unique_products || category.total_products || category.count || 0;
+                    const categoryPath = category.path || '';
+                    const safeName = String(categoryName).replace(/'/g, "\\'");
                     html += `
-                        <div class="category-card" onclick="app.searchInCategory('${category.name}')">
-                            <h4>${category.name}</h4>
-                            <p>${category.unique_products} unique products</p>
-                            <small>${category.path || ''}</small>
+                        <div class="category-card" onclick="app.searchInCategory('${safeName}')">
+                            <h4>${categoryName}</h4>
+                            <p>${productCount} unique products</p>
+                            <small>${categoryPath}</small>
                         </div>
                     `;
                 });
                 html += '</div></div>';
             }
 
-            if (data.products && data.products.products && data.products.products.length > 0) {
-                html += '<div class="products-section"><h3>Products</h3><div class="products-grid">';
-                data.products.products.forEach(product => {
-                    html += this.createAggregatedProductCard(product);
+            // Check for products data
+            const productsData = data.products || data;
+            if (productsData && ((productsData.products && productsData.products.length > 0) || (productsData.length > 0 && !productsData.categories))) {
+                html += '<div class="products-section"><h3>Products</h3><div class="products-grid" id="productGrid">';
+                const products = productsData.products || productsData;
+                products.forEach(product => {
+                    if (product.title) { // Only show actual products, not categories
+                        html += this.createProductCard(product);
+                    }
                 });
                 html += '</div></div>';
                 
                 // Update pagination for products
-                this.updatePagination(data.products.page, data.products.total_pages);
+                if (productsData.page && productsData.total_pages) {
+                    this.updatePagination(productsData.page, productsData.total_pages);
+                }
             }
 
             this.resultsContainer.innerHTML = html;
