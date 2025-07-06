@@ -267,7 +267,7 @@ class ModernSearchApp {
         this.performSearch();
     }
 
-    async performSearch(page = 1) {
+    async performSearch(page = 1, searchType = 'all') {
         this.currentPage = page;
         this.showLoading(true);
 
@@ -277,7 +277,8 @@ class ModernSearchApp {
             // Build query parameters
             const params = new URLSearchParams({
                 page: page,
-                per_page: 20
+                per_page: 20,
+                type: searchType
             });
 
             if (this.currentQuery) {
@@ -299,7 +300,7 @@ class ModernSearchApp {
             this.lastSearchTime = searchTime;
 
             // Update UI
-            this.displayResults(data);
+            this.displayUnifiedResults(data);
             this.updateSearchStats(data, searchTime);
 
             // Search categories if query exists
@@ -674,11 +675,11 @@ class ModernSearchApp {
     async showProductDetails(productId) {
         try {
             console.log('Show product details for:', productId);
-            
+
             // Show modal with loading state
             const modal = new bootstrap.Modal(document.getElementById('productModal'));
             const modalBody = document.getElementById('productModalBody');
-            
+
             modalBody.innerHTML = `
                 <div class="text-center">
                     <div class="spinner-border" role="status">
@@ -687,9 +688,9 @@ class ModernSearchApp {
                     <p class="mt-2">Loading product details...</p>
                 </div>
             `;
-            
+
             modal.show();
-            
+
             // Try to get product details from API
             let product = null;
             try {
@@ -700,12 +701,12 @@ class ModernSearchApp {
             } catch (error) {
                 console.log('API endpoint not available, using search data');
             }
-            
+
             // If API fails, find product in current search results
             if (!product) {
                 const productCards = document.querySelectorAll('.product-card');
                 let foundProduct = null;
-                
+
                 // Search through current results to find matching product
                 const allProducts = Array.from(productCards).map(card => {
                     const title = card.querySelector('.product-title')?.textContent || '';
@@ -713,7 +714,7 @@ class ModernSearchApp {
                     const availability = card.querySelector('.product-availability')?.textContent || '';
                     const shop = card.querySelector('.product-shop')?.textContent || '';
                     const image = card.querySelector('.product-image img')?.src || '';
-                    
+
                     return {
                         id: productId,
                         title,
@@ -724,10 +725,10 @@ class ModernSearchApp {
                         description: 'Product details from current search results'
                     };
                 });
-                
+
                 product = allProducts[0]; // Use first product as fallback
             }
-            
+
             // Display product details
             if (product) {
                 this.displayProductModal(product);
@@ -739,7 +740,7 @@ class ModernSearchApp {
                     </div>
                 `;
             }
-            
+
         } catch (error) {
             console.error('Error showing product details:', error);
             document.getElementById('productModalBody').innerHTML = `
@@ -754,27 +755,27 @@ class ModernSearchApp {
     displayProductModal(product) {
         const modalBody = document.getElementById('productModalBody');
         const modalTitle = document.getElementById('productModalLabel');
-        
+
         modalTitle.textContent = product.title || 'Product Details';
-        
+
         const imageUrl = product.image_url && product.image_url !== 'https://via.placeholder.com/200x150?text=No+Image' 
             ? product.image_url 
             : null;
-        
+
         const price = product.price ? 
             (typeof product.price === 'string' ? product.price : `€${product.price.toFixed(2)}`) 
             : 'Price not available';
-        
+
         const originalPrice = product.original_price && product.original_price > parseFloat(product.price) ? 
             `<del class="text-muted ms-2">€${product.original_price.toFixed(2)}</del>` : '';
-        
+
         const discount = product.original_price && product.original_price > parseFloat(product.price) ?
             `<span class="badge bg-warning text-dark ms-2">-${Math.round(((product.original_price - parseFloat(product.price)) / product.original_price) * 100)}%</span>` : '';
-        
+
         const availability = product.availability || product.availability === true ? 
             '<span class="badge bg-success">Available</span>' : 
             '<span class="badge bg-danger">Out of Stock</span>';
-        
+
         modalBody.innerHTML = `
             <div class="row">
                 <div class="col-md-5">
@@ -787,9 +788,9 @@ class ModernSearchApp {
                 </div>
                 <div class="col-md-7">
                     <h5 class="mb-3">${product.title}</h5>
-                    
+
                     ${product.description ? `<p class="text-muted mb-3">${product.description}</p>` : ''}
-                    
+
                     <div class="mb-3">
                         <h4 class="text-primary mb-1">
                             ${price}
@@ -797,47 +798,47 @@ class ModernSearchApp {
                             ${discount}
                         </h4>
                     </div>
-                    
+
                     <div class="mb-3">
                         <strong>Availability:</strong> ${availability}
                     </div>
-                    
+
                     ${product.stock_quantity ? `
                         <div class="mb-3">
                             <strong>Stock:</strong> ${product.stock_quantity} units
                         </div>
                     ` : ''}
-                    
+
                     ${product.brand ? `
                         <div class="mb-3">
                             <strong>Brand:</strong> ${typeof product.brand === 'object' ? product.brand.name : product.brand}
                         </div>
                     ` : ''}
-                    
+
                     ${product.shop ? `
                         <div class="mb-3">
                             <strong>Shop:</strong> ${typeof product.shop === 'object' ? product.shop.name : product.shop}
                         </div>
                     ` : ''}
-                    
+
                     ${product.category ? `
                         <div class="mb-3">
                             <strong>Category:</strong> ${typeof product.category === 'object' ? product.category.name : product.category}
                         </div>
                     ` : ''}
-                    
+
                     ${product.ean ? `
                         <div class="mb-3">
                             <strong>EAN:</strong> ${product.ean}
                         </div>
                     ` : ''}
-                    
+
                     ${product.mpn ? `
                         <div class="mb-3">
                             <strong>MPN:</strong> ${product.mpn}
                         </div>
                     ` : ''}
-                    
+
                     ${product.product_url ? `
                         <div class="mt-4">
                             <a href="${product.product_url}" target="_blank" class="btn btn-primary">
@@ -885,6 +886,79 @@ class ModernSearchApp {
         this.resultsCount.textContent = 'Search error';
         this.resultsMeta.textContent = message;
         this.showNoResults();
+    }
+
+    displayUnifiedResults(data) {
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        if (data.type === 'unified') {
+            // Display both products and categories
+            let html = '';
+
+            if (data.categories && data.categories.length > 0) {
+                html += '<div class="categories-section"><h3>Categories</h3><div class="categories-grid">';
+                data.categories.forEach(category => {
+                    html += `
+                        <div class="category-card" onclick="app.searchInCategory('${category.name}')">
+                            <h4>${category.name}</h4>
+                            <p>${category.unique_products} unique products</p>
+                            <small>${category.path || ''}</small>
+                        </div>
+                    `;
+                });
+                html += '</div></div>';
+            }
+
+            if (data.products && data.products.products && data.products.products.length > 0) {
+                html += '<div class="products-section"><h3>Products</h3><div class="products-grid">';
+                data.products.products.forEach(product => {
+                    html += this.createAggregatedProductCard(product);
+                });
+                html += '</div></div>';
+            }
+
+            resultsContainer.innerHTML = html;
+        } else {
+            // Handle single type results
+            this.displayResults(data);
+        }
+    }
+
+    createAggregatedProductCard(product) {
+        const availabilityText = product.availability ? 
+            `Available in ${product.available_shops}/${product.shop_count} shops` :
+            `Available in 3-7 days`;
+
+        const priceText = product.best_available_price ? 
+            `Best: €${product.best_available_price.toFixed(2)}` :
+            `From: €${product.min_price?.toFixed(2) || 'N/A'}`;
+
+        return `
+            <div class="product-card aggregated" onclick="app.showProductDetails(${product.product_ids[0]})">
+                <img src="${product.image_url || '/static/placeholder.jpg'}" alt="${product.title}" loading="lazy">
+                <div class="product-info">
+                    <h3 class="product-title">${product.title}</h3>
+                    <p class="product-brand">${product.brand?.name || ''}</p>
+                    <div class="price-info">
+                        <span class="price">${priceText}</span>
+                        ${product.min_price !== product.max_price ? 
+                            `<span class="price-range">Range: €${product.min_price?.toFixed(2)} - €${product.max_price?.toFixed(2)}</span>` : ''
+                        }
+                    </div>
+                    <div class="availability-info">
+                        <span class="availability ${product.availability ? 'available' : 'limited'}">${availabilityText}</span>
+                        <span class="shop-count">${product.shop_count} shops</span>
+                    </div>
+                    <div class="delivery-info">${product.availability_info.estimated_delivery}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    searchInCategory(categoryName) {
+        this.currentFilters.category = categoryName;
+        this.updateFilters();
+        this.performSearch(1, 'products');
     }
 }
 

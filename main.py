@@ -75,9 +75,10 @@ async def admin():
     with open("static/admin.html", "r") as f:
         return HTMLResponse(content=f.read())
 
-@app.get("/search", response_model=SearchResponse)
-async def search_products(
+@app.get("/search")
+async def unified_search(
     q: Optional[str] = Query(None, description="Search query"),
+    type: Optional[str] = Query("all", description="Search type: all, products, categories"),
     title: Optional[str] = Query(None, description="Search in product title"),
     brand: Optional[str] = Query(None, description="Filter by brand"),
     category: Optional[str] = Query(None, description="Filter by category"),
@@ -86,7 +87,6 @@ async def search_products(
     availability: Optional[bool] = Query(None, description="Filter by availability"),
     ean: Optional[str] = Query(None, description="Search by EAN code"),
     mpn: Optional[str] = Query(None, description="Search by MPN"),
-    shop: Optional[str] = Query(None, description="Filter by shop"),
     color: Optional[str] = Query(None, description="Filter by color"),
     size: Optional[str] = Query(None, description="Filter by size"),
     sort: Optional[str] = Query("relevance", description="Sort order"),
@@ -94,49 +94,11 @@ async def search_products(
     per_page: int = Query(50, ge=1, le=100, description="Results per page"),
     db: AsyncSession = Depends(get_db)
 ):
-    """Search products with modern features and Elasticsearch support"""
+    """Unified search for products and categories with multi-shop aggregation"""
     try:
-        # Try Elasticsearch first for better performance
-        if elasticsearch_service.client:
-            search_query = q or title or ""
-            filters_dict = {
-                "brand": brand,
-                "category": category,
-                "min_price": min_price,
-                "max_price": max_price,
-                "availability": availability,
-                "ean": ean,
-                "mpn": mpn,
-                "shop": shop,
-                "color": color,
-                "size": size,
-                "sort": sort
-            }
-            
-            # Remove None values
-            filters_dict = {k: v for k, v in filters_dict.items() if v is not None}
-            
-            es_results = await elasticsearch_service.search_products(
-                query=search_query,
-                filters=filters_dict,
-                page=page,
-                per_page=per_page
-            )
-            
-            if es_results["products"]:
-                # Convert to SearchResponse format
-                return SearchResponse(
-                    products=es_results["products"],
-                    total=es_results["total"],
-                    page=page,
-                    per_page=per_page,
-                    total_pages=(es_results["total"] + per_page - 1) // per_page,
-                    filters_applied=filters_dict,
-                    execution_time_ms=es_results.get("took", 0),
-                    facets=es_results.get("aggregations", {})
-                )
+        search_service = SearchService(db)
         
-        # Fallback to PostgreSQL search
+        # Build filters
         filters = SearchFilters(
             title=q or title,
             brand=brand,
@@ -146,15 +108,36 @@ async def search_products(
             availability=availability,
             ean=ean,
             mpn=mpn,
-            shop=shop,
             color=color,
             size=size
         )
         
-        search_service = SearchService(db)
-        results = await search_service.search_products(filters, page, per_page)
-        
-        return results
+        if type == "categories":
+            # Search only categories
+            categories = await search_service.search_categories(q or "", per_page)
+            return {
+                "type": "categories",
+                "categories": categories,
+                "total": len(categories),
+                "page": page,
+                "per_page": per_page
+            }
+        elif type == "products":
+            # Search only products with multi-shop aggregation
+            results = await search_service.search_products_aggregated(filters, page, per_page)
+            return results
+        else:
+            # Unified search (default)
+            products = await search_service.search_products_aggregated(filters, page, min(per_page // 2, 20))
+            categories = await search_service.search_categories(q or "", min(per_page // 2, 10))
+            
+            return {
+                "type": "unified",
+                "products": products,
+                "categories": categories,
+                "page": page,
+                "per_page": per_page
+            }
         
     except Exception as e:
         logger.error(f"Search error: {e}")

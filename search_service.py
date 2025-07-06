@@ -14,6 +14,129 @@ class SearchService:
     def __init__(self, db: AsyncSession):
         self.db = db
     
+    async def search_products_aggregated(
+        self,
+        filters: SearchFilters,
+        page: int = 1,
+        per_page: int = 50
+    ) -> SearchResponse:
+        """Search products with multi-shop aggregation and enhanced availability info"""
+        start_time = time.time()
+        
+        try:
+            # Build query to group products by EAN/title similarity
+            query = text("""
+                WITH product_groups AS (
+                    SELECT 
+                        COALESCE(p.ean, '') as group_key,
+                        p.title,
+                        p.description,
+                        p.image_url,
+                        p.brand_id,
+                        p.category_id,
+                        MIN(p.price) as min_price,
+                        MAX(p.price) as max_price,
+                        AVG(p.price) as avg_price,
+                        COUNT(DISTINCT p.shop_id) as shop_count,
+                        BOOL_OR(p.availability) as any_available,
+                        COUNT(CASE WHEN p.availability = true THEN 1 END) as available_shops,
+                        MIN(CASE WHEN p.availability = true THEN p.price END) as best_available_price,
+                        ARRAY_AGG(DISTINCT s.name) as shop_names,
+                        ARRAY_AGG(DISTINCT p.id) as product_ids,
+                        MAX(p.updated_at) as last_updated
+                    FROM products p
+                    JOIN shops s ON p.shop_id = s.id
+                    LEFT JOIN brands b ON p.brand_id = b.id
+                    LEFT JOIN categories c ON p.category_id = c.id
+                    WHERE 1=1
+                    GROUP BY COALESCE(p.ean, ''), p.title, p.description, p.image_url, p.brand_id, p.category_id
+                    HAVING COUNT(*) > 0
+                )
+                SELECT * FROM product_groups
+                ORDER BY any_available DESC, min_price ASC
+                LIMIT :limit OFFSET :offset
+            """)
+            
+            offset = (page - 1) * per_page
+            result = await self.db.execute(query, {"limit": per_page, "offset": offset})
+            product_groups = result.fetchall()
+            
+            # Convert to response format
+            aggregated_products = []
+            for group in product_groups:
+                # Get brand and category info
+                brand_info = None
+                if group.brand_id:
+                    brand_query = select(Brand).where(Brand.id == group.brand_id)
+                    brand_result = await self.db.execute(brand_query)
+                    brand_info = brand_result.scalar_one_or_none()
+                
+                category_info = None
+                if group.category_id:
+                    cat_query = select(Category).where(Category.id == group.category_id)
+                    cat_result = await self.db.execute(cat_query)
+                    category_info = cat_result.scalar_one_or_none()
+                
+                product_data = {
+                    "id": group.product_ids[0] if group.product_ids else 0,
+                    "title": group.title,
+                    "description": group.description,
+                    "image_url": group.image_url,
+                    "min_price": float(group.min_price) if group.min_price else None,
+                    "max_price": float(group.max_price) if group.max_price else None,
+                    "avg_price": float(group.avg_price) if group.avg_price else None,
+                    "best_available_price": float(group.best_available_price) if group.best_available_price else None,
+                    "shop_count": group.shop_count,
+                    "available_shops": group.available_shops,
+                    "shop_names": list(group.shop_names),
+                    "availability": group.any_available,
+                    "availability_info": {
+                        "available_in_shops": group.available_shops,
+                        "total_shops": group.shop_count,
+                        "estimated_delivery": "1-3 days" if group.any_available else "3-7 days"
+                    },
+                    "brand": {"name": brand_info.name} if brand_info else None,
+                    "category": {"name": category_info.name} if category_info else None,
+                    "last_updated": group.last_updated,
+                    "product_ids": list(group.product_ids)
+                }
+                aggregated_products.append(product_data)
+            
+            # Get total count
+            count_query = text("""
+                SELECT COUNT(DISTINCT COALESCE(p.ean, p.title))
+                FROM products p
+                WHERE 1=1
+            """)
+            total_result = await self.db.execute(count_query)
+            total = total_result.scalar() or 0
+            
+            execution_time = (time.time() - start_time) * 1000
+            total_pages = (total + per_page - 1) // per_page
+            
+            return {
+                "products": aggregated_products,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "execution_time_ms": round(execution_time, 2),
+                "search_type": "aggregated"
+            }
+            
+        except Exception as e:
+            logger.error(f"Aggregated search error: {e}")
+            execution_time = (time.time() - start_time) * 1000
+            return {
+                "products": [],
+                "total": 0,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": 0,
+                "execution_time_ms": round(execution_time, 2),
+                "search_type": "aggregated"
+            }
+
     async def search_products(
         self,
         filters: SearchFilters,
@@ -312,15 +435,39 @@ class SearchService:
             return {}
     
     async def search_categories(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Search categories by name"""
+        """Enhanced category search with product aggregation"""
         try:
-            stmt = select(Category.name, func.count(Product.id).label('count')).join(
-                Product, Category.id == Product.category_id
-            ).where(
-                Category.name.ilike(f"%{query}%")
-            ).group_by(Category.name).order_by(
-                func.count(Product.id).desc()
-            ).limit(limit)
+            if not query:
+                # Return top categories if no query
+                stmt = select(
+                    Category.name, 
+                    Category.path,
+                    func.count(Product.id).label('total_products'),
+                    func.count(func.distinct(func.coalesce(Product.ean, Product.title))).label('unique_products')
+                ).join(
+                    Product, Category.id == Product.category_id
+                ).group_by(Category.name, Category.path).order_by(
+                    func.count(Product.id).desc()
+                ).limit(limit)
+            else:
+                # Search with relevance scoring
+                stmt = select(
+                    Category.name,
+                    Category.path,
+                    func.count(Product.id).label('total_products'),
+                    func.count(func.distinct(func.coalesce(Product.ean, Product.title))).label('unique_products'),
+                    (func.similarity(Category.name, query) + func.similarity(Category.path, query)).label('relevance')
+                ).join(
+                    Product, Category.id == Product.category_id
+                ).where(
+                    or_(
+                        Category.name.ilike(f"%{query}%"),
+                        Category.path.ilike(f"%{query}%")
+                    )
+                ).group_by(Category.name, Category.path).order_by(
+                    text('relevance DESC'),
+                    func.count(Product.id).desc()
+                ).limit(limit)
             
             result = await self.db.execute(stmt)
             categories = []
@@ -328,7 +475,10 @@ class SearchService:
             for row in result.fetchall():
                 categories.append({
                     "name": row.name,
-                    "count": row.count
+                    "path": row.path,
+                    "total_products": row.total_products,
+                    "unique_products": row.unique_products,
+                    "type": "category"
                 })
             
             return categories
