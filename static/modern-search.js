@@ -973,3 +973,60 @@ document.addEventListener('click', (e) => {
         e.preventDefault();
     }
 });
+async performSearch(query = '', page = 1) {
+        try {
+            this.showLoading(true);
+
+            // Build search parameters
+            const params = new URLSearchParams({
+                page: page,
+                per_page: this.itemsPerPage,
+                type: 'all'
+            });
+
+            if (query) {
+                params.append('q', query);
+            }
+
+            // Add sort parameter
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect && sortSelect.value) {
+                params.append('sort', sortSelect.value);
+            }
+
+            const response = await fetch(`/search?${params}`);
+            const data = await response.json();
+
+            if (data.type === 'unified') {
+                this.displayUnifiedResults(data);
+            } else {
+                this.displayResults(data);
+            }
+
+        } catch (error) {
+            console.error('Search error:', error);
+            this.showError('Σφάλμα κατά την αναζήτηση. Παρακαλώ δοκιμάστε ξανά.');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+// Add event listeners
+        this.searchInput.addEventListener('input', (e) => {
+            this.handleSearchInput(e.target.value);
+        });
+
+        this.searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.currentPage = 1;
+                this.performSearch(e.target.value);
+            }
+        });
+
+        // Add sort change listener
+        const sortSelect = document.getElementById('sortSelect');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', () => {
+                this.currentPage = 1;
+                this.performSearch(this.searchInput.value);
+            });
+        }

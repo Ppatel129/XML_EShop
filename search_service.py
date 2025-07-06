@@ -18,7 +18,8 @@ class SearchService:
         self,
         filters: SearchFilters,
         page: int = 1,
-        per_page: int = 50
+        per_page: int = 50,
+        sort: str = 'relevance'
     ) -> SearchResponse:
         """Search products with multi-shop aggregation and enhanced availability info"""
         start_time = time.time()
@@ -53,12 +54,17 @@ class SearchService:
                     HAVING COUNT(*) > 0
                 )
                 SELECT * FROM product_groups
-                ORDER BY any_available DESC, min_price ASC
+                ORDER BY 
+                    CASE WHEN :sort = 'price_asc' THEN min_price END ASC,
+                    CASE WHEN :sort = 'price_desc' THEN min_price END DESC,
+                    CASE WHEN :sort = 'availability' THEN any_available END DESC,
+                    CASE WHEN :sort = 'newest' THEN last_updated END DESC,
+                    any_available DESC, min_price ASC
                 LIMIT :limit OFFSET :offset
             """)
             
             offset = (page - 1) * per_page
-            result = await self.db.execute(query, {"limit": per_page, "offset": offset})
+            result = await self.db.execute(query, {"limit": per_page, "offset": offset, "sort": sort})
             product_groups = result.fetchall()
             
             # Convert to response format

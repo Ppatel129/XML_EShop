@@ -124,11 +124,11 @@ async def unified_search(
             }
         elif type == "products":
             # Search only products with multi-shop aggregation
-            results = await search_service.search_products_aggregated(filters, page, per_page)
+            results = await search_service.search_products_aggregated(filters, page, per_page, sort)
             return results
         else:
             # Unified search (default)
-            products = await search_service.search_products_aggregated(filters, page, min(per_page // 2, 20))
+            products = await search_service.search_products_aggregated(filters, page, min(per_page // 2, 20), sort)
             categories = await search_service.search_categories(q or "", min(per_page // 2, 10))
             
             return {
