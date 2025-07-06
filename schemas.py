@@ -17,7 +17,7 @@ class Shop(ShopBase):
     total_products: int = 0
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -31,7 +31,7 @@ class BrandCreate(BrandBase):
 class Brand(BrandBase):
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -48,7 +48,7 @@ class CategoryCreate(CategoryBase):
 class Category(CategoryBase):
     id: int
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -73,7 +73,7 @@ class ProductVariant(ProductVariantBase):
     product_id: int
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -112,7 +112,7 @@ class Product(ProductBase):
     variants: List[ProductVariant] = []
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -120,15 +120,16 @@ class SearchFilters(BaseModel):
     title: Optional[str] = None
     brand: Optional[str] = None
     category: Optional[str] = None
+    brands: Optional[List[str]] = None
+    categories: Optional[List[str]] = None
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     availability: Optional[bool] = None
     ean: Optional[str] = None
     mpn: Optional[str] = None
-    shop: Optional[str] = None
     color: Optional[str] = None
     size: Optional[str] = None
-    
+
     @validator('min_price', 'max_price')
     def validate_price(cls, v):
         if v is not None and v < 0:

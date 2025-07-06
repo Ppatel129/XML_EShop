@@ -500,40 +500,58 @@ class ModernSearchApp {
     }
 
     updateFacets(facets) {
-        // Update brand filters
+        // Update brand filters with search
         if (facets.brands && facets.brands.length > 0) {
-            this.brandFilters.innerHTML = facets.brands.slice(0, 10).map(brand => {
-                const brandKey = brand.key || brand.name || brand;
-                const brandCount = brand.doc_count || brand.count || 0;
-                const safeKey = String(brandKey).replace(/'/g, "\\'");
-                return `
-                    <div class="filter-option">
-                        <input type="checkbox" id="brand-${brandKey}" value="${brandKey}" 
-                               ${this.currentFilters.brand === brandKey ? 'checked' : ''}
-                               onchange="app.handleBrandFilter('${safeKey}', this.checked)">
-                        <label for="brand-${brandKey}">${brandKey}</label>
-                        <span class="filter-count">${brandCount}</span>
-                    </div>
-                `;
-            }).join('');
+            this.brandFilters.innerHTML = `
+                <div class="filter-search">
+                    <input type="text" id="brandSearch" placeholder="Search brands..." 
+                           onkeyup="app.filterBrands(this.value)">
+                </div>
+                <div class="filter-options" id="brandOptions">
+                    ${facets.brands.map(brand => {
+                        const brandKey = brand.key || brand.name || brand;
+                        const brandCount = brand.doc_count || brand.count || 0;
+                        const safeKey = String(brandKey).replace(/'/g, "\\'");
+                        const isSelected = this.currentFilters.brands && this.currentFilters.brands.includes(brandKey);
+                        return `
+                            <div class="filter-option" data-brand="${brandKey.toLowerCase()}">
+                                <input type="checkbox" id="brand-${brandKey}" value="${brandKey}" 
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="app.handleBrandFilter('${safeKey}', this.checked)">
+                                <label for="brand-${brandKey}">${brandKey}</label>
+                                <span class="filter-count">${brandCount}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         }
 
-        // Update category filters
+        // Update category filters with search
         if (facets.categories && facets.categories.length > 0) {
-            this.categoryFilters.innerHTML = facets.categories.slice(0, 10).map(category => {
-                const categoryKey = category.key || category.name || category;
-                const categoryCount = category.doc_count || category.count || 0;
-                const safeKey = String(categoryKey).replace(/'/g, "\\'");
-                return `
-                    <div class="filter-option">
-                        <input type="checkbox" id="category-${categoryKey}" value="${categoryKey}"
-                               ${this.currentFilters.category === categoryKey ? 'checked' : ''}
-                               onchange="app.handleCategoryFilter('${safeKey}', this.checked)">
-                        <label for="category-${categoryKey}">${categoryKey}</label>
-                        <span class="filter-count">${categoryCount}</span>
-                    </div>
-                `;
-            }).join('');
+            this.categoryFilters.innerHTML = `
+                <div class="filter-search">
+                    <input type="text" id="categorySearch" placeholder="Search categories..." 
+                           onkeyup="app.filterCategories(this.value)">
+                </div>
+                <div class="filter-options" id="categoryOptions">
+                    ${facets.categories.map(category => {
+                        const categoryKey = category.key || category.name || category;
+                        const categoryCount = category.doc_count || category.count || 0;
+                        const safeKey = String(categoryKey).replace(/'/g, "\\'");
+                        const isSelected = this.currentFilters.categories && this.currentFilters.categories.includes(categoryKey);
+                        return `
+                            <div class="filter-option" data-category="${categoryKey.toLowerCase()}">
+                                <input type="checkbox" id="category-${categoryKey}" value="${categoryKey}"
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="app.handleCategoryFilter('${safeKey}', this.checked)">
+                                <label for="category-${categoryKey}">${categoryKey}</label>
+                                <span class="filter-count">${categoryCount}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         }
 
         // Update shop filters
@@ -573,21 +591,67 @@ class ModernSearchApp {
     }
 
     handleBrandFilter(brand, checked) {
+        if (!this.currentFilters.brands) {
+            this.currentFilters.brands = [];
+        }
+        
         if (checked) {
-            this.currentFilters.brand = brand;
+            if (!this.currentFilters.brands.includes(brand)) {
+                this.currentFilters.brands.push(brand);
+            }
         } else {
-            delete this.currentFilters.brand;
+            this.currentFilters.brands = this.currentFilters.brands.filter(b => b !== brand);
+            if (this.currentFilters.brands.length === 0) {
+                delete this.currentFilters.brands;
+            }
         }
         this.updateFilters();
     }
 
     handleCategoryFilter(category, checked) {
+        if (!this.currentFilters.categories) {
+            this.currentFilters.categories = [];
+        }
+        
         if (checked) {
-            this.currentFilters.category = category;
+            if (!this.currentFilters.categories.includes(category)) {
+                this.currentFilters.categories.push(category);
+            }
         } else {
-            delete this.currentFilters.category;
+            this.currentFilters.categories = this.currentFilters.categories.filter(c => c !== category);
+            if (this.currentFilters.categories.length === 0) {
+                delete this.currentFilters.categories;
+            }
         }
         this.updateFilters();
+    }
+
+    filterBrands(searchTerm) {
+        const brandOptions = document.getElementById('brandOptions');
+        const options = brandOptions.querySelectorAll('.filter-option');
+        
+        options.forEach(option => {
+            const brandName = option.getAttribute('data-brand');
+            if (brandName.includes(searchTerm.toLowerCase())) {
+                option.style.display = 'block';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    }
+
+    filterCategories(searchTerm) {
+        const categoryOptions = document.getElementById('categoryOptions');
+        const options = categoryOptions.querySelectorAll('.filter-option');
+        
+        options.forEach(option => {
+            const categoryName = option.getAttribute('data-category');
+            if (categoryName.includes(searchTerm.toLowerCase())) {
+                option.style.display = 'block';
+            } else {
+                option.style.display = 'none';
+            }
+        });
     }
 
     handleShopFilter(shop, checked) {
@@ -608,19 +672,23 @@ class ModernSearchApp {
     updateActiveFilters() {
         const activeFilters = [];
 
-        if (this.currentFilters.brand) {
-            activeFilters.push({
-                type: 'brand',
-                value: this.currentFilters.brand,
-                label: `Brand: ${this.currentFilters.brand}`
+        if (this.currentFilters.brands && this.currentFilters.brands.length > 0) {
+            this.currentFilters.brands.forEach(brand => {
+                activeFilters.push({
+                    type: 'brand',
+                    value: brand,
+                    label: `Brand: ${brand}`
+                });
             });
         }
 
-        if (this.currentFilters.category) {
-            activeFilters.push({
-                type: 'category',
-                value: this.currentFilters.category,
-                label: `Category: ${this.currentFilters.category}`
+        if (this.currentFilters.categories && this.currentFilters.categories.length > 0) {
+            this.currentFilters.categories.forEach(category => {
+                activeFilters.push({
+                    type: 'category',
+                    value: category,
+                    label: `Category: ${category}`
+                });
             });
         }
 
@@ -661,10 +729,20 @@ class ModernSearchApp {
     removeFilter(type, value) {
         switch (type) {
             case 'brand':
-                delete this.currentFilters.brand;
+                if (this.currentFilters.brands) {
+                    this.currentFilters.brands = this.currentFilters.brands.filter(b => b !== value);
+                    if (this.currentFilters.brands.length === 0) {
+                        delete this.currentFilters.brands;
+                    }
+                }
                 break;
             case 'category':
-                delete this.currentFilters.category;
+                if (this.currentFilters.categories) {
+                    this.currentFilters.categories = this.currentFilters.categories.filter(c => c !== value);
+                    if (this.currentFilters.categories.length === 0) {
+                        delete this.currentFilters.categories;
+                    }
+                }
                 break;
             case 'shop':
                 delete this.currentFilters.shop;
@@ -688,6 +766,12 @@ class ModernSearchApp {
         document.querySelectorAll('.filter-option input[type="checkbox"]').forEach(checkbox => {
             checkbox.checked = false;
         });
+
+        // Clear search inputs
+        const brandSearch = document.getElementById('brandSearch');
+        const categorySearch = document.getElementById('categorySearch');
+        if (brandSearch) brandSearch.value = '';
+        if (categorySearch) categorySearch.value = '';
 
         this.minPriceInput.value = '';
         this.maxPriceInput.value = '';
@@ -921,48 +1005,39 @@ class ModernSearchApp {
 
     displayUnifiedResults(data) {
         if (data.type === 'unified') {
-            // Display both products and categories
-            let html = '';
-
-            if (data.categories && data.categories.length > 0) {
-                html += '<div class="categories-section"><h3>Categories</h3><div class="categories-grid">';
-                data.categories.forEach(category => {
-                    const categoryName = category.name || category.key || category;
-                    const productCount = category.unique_products || category.total_products || category.count || 0;
-                    const categoryPath = category.path || '';
-                    const safeName = String(categoryName).replace(/'/g, "\\'");
-                    html += `
-                        <div class="category-card" onclick="app.searchInCategory('${safeName}')">
-                            <h4>${categoryName}</h4>
-                            <p>${productCount} unique products</p>
-                            <small>${categoryPath}</small>
-                        </div>
-                    `;
-                });
-                html += '</div></div>';
-            }
-
-            // Check for products data
+            // Display only products - no categories in product list
             const productsData = data.products || data;
             if (productsData && ((productsData.products && productsData.products.length > 0) || (productsData.length > 0 && !productsData.categories))) {
-                html += '<div class="products-section"><h3>Products</h3><div class="products-grid" id="productGrid">';
                 const products = productsData.products || productsData;
-                products.forEach(product => {
-                    if (product.title) { // Only show actual products, not categories
-                        html += this.createProductCard(product);
-                    }
-                });
-                html += '</div></div>';
                 
-                // Update pagination for products
+                // Update results count
+                const total = productsData.total || products.length;
+                this.resultsCount.textContent = `${total.toLocaleString()} results`;
+                
                 if (productsData.page && productsData.total_pages) {
+                    this.resultsMeta.textContent = `Page ${productsData.page} of ${productsData.total_pages}`;
                     this.updatePagination(productsData.page, productsData.total_pages);
                 }
-            }
 
-            this.resultsContainer.innerHTML = html;
-            this.noResults.style.display = 'none';
-            this.resultsContainer.style.display = 'block';
+                // Display products only
+                this.productGrid.innerHTML = products.map(product => {
+                    if (product.title) { // Only show actual products, not categories
+                        return this.createProductCard(product);
+                    }
+                    return '';
+                }).join('');
+
+                // Update facets if available
+                if (productsData.facets) {
+                    this.updateFacets(productsData.facets);
+                }
+
+                this.noResults.style.display = 'none';
+                this.productGrid.style.display = 'grid';
+                this.resultsContainer.style.display = 'block';
+            } else {
+                this.showNoResults();
+            }
         } else {
             // Handle single type results (products only)
             this.displayResults(data);

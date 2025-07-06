@@ -98,7 +98,7 @@ async def unified_search(
     try:
         search_service = SearchService(db)
         
-        # Build filters
+        # Build filters - handle multi-select brands and categories
         filters = SearchFilters(
             title=q or title,
             brand=brand,
@@ -111,6 +111,12 @@ async def unified_search(
             color=color,
             size=size
         )
+        
+        # Handle multi-select filters from query parameters
+        if 'brands' in request.query_params:
+            filters.brands = request.query_params.getlist('brands')
+        if 'categories' in request.query_params:
+            filters.categories = request.query_params.getlist('categories')
         
         if type == "categories":
             # Search only categories
