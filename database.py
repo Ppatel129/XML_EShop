@@ -11,8 +11,9 @@ class Base(DeclarativeBase):
 
 
 # -- Build the asyncpg PostgreSQL URL using provided credentials --
-database_url = "postgresql+asyncpg://postgres:123123@localhost:5432/postgres"
-
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 # Remove SSL parameters that cause issues with asyncpg
 if "sslmode" in database_url:
     from urllib.parse import urlparse, urlunparse, parse_qs
