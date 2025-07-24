@@ -9,10 +9,9 @@ logger = logging.getLogger(__name__)
 class Base(DeclarativeBase):
     pass
 
-# Convert PostgreSQL URL to async format and remove SSL parameters
-database_url = settings.DATABASE_URL
-if database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# -- Build the asyncpg PostgreSQL URL using provided credentials --
+database_url = "postgresql+asyncpg://postgres:123123@localhost:5432/postgres"
 
 # Remove SSL parameters that cause issues with asyncpg
 if "sslmode" in database_url:

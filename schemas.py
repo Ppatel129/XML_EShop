@@ -129,6 +129,7 @@ class SearchFilters(BaseModel):
     mpn: Optional[str] = None
     color: Optional[str] = None
     size: Optional[str] = None
+    shops: Optional[List[str]] = None
 
     @validator('min_price', 'max_price')
     def validate_price(cls, v):

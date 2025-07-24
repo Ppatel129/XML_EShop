@@ -1,21 +1,24 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Depends, Query, BackgroundTasks, File, UploadFile
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db, init_db, close_db
 from models import Product, Shop, Brand, Category
 from schemas import (
     SearchFilters, SearchResponse, Product as ProductSchema, 
-    Shop as ShopSchema, FeedProcessResult
+    Shop as ShopSchema, ShopCreate, FeedProcessResult
 )
 from search_service import SearchService
 from feed_scheduler import FeedProcessor, scheduler
 from config import settings
 from elasticsearch_service import elasticsearch_service
 from typing import List, Optional, Dict, Any
+from pathlib import Path
 import uvicorn
 
 # Configure logging
@@ -33,11 +36,16 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("Database initialized")
         
-        # Initialize Elasticsearch
-        es_connected = await elasticsearch_service.connect()
-        if es_connected:
-            await elasticsearch_service.create_index()
-            logger.info("Elasticsearch initialized")
+        # Initialize Elasticsearch (optional)
+        try:
+            es_connected = await elasticsearch_service.connect()
+            if es_connected:
+                await elasticsearch_service.create_index()
+                logger.info("Elasticsearch initialized")
+            else:
+                logger.info("Elasticsearch not available - using PostgreSQL search only")
+        except Exception as e:
+            logger.warning(f"Elasticsearch initialization failed: {e} - using PostgreSQL search only")
         
         # Start background feed scheduler
         asyncio.create_task(scheduler.start())
@@ -47,7 +55,10 @@ async def lifespan(app: FastAPI):
     finally:
         # Cleanup
         scheduler.stop()
-        await elasticsearch_service.close()
+        try:
+            await elasticsearch_service.close()
+        except:
+            pass
         await close_db()
         logger.info("Application shutdown complete")
 
@@ -66,8 +77,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve the main search interface"""
-    with open("static/index.html", "r") as f:
-        return HTMLResponse(content=f.read())
+    try:
+        index_file = Path("static/index.html")
+        if index_file.exists():
+            with index_file.open("r", encoding="utf-8") as f:
+                return HTMLResponse(content=f.read())
+        else:
+            return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
+    except Exception as e:
+        return HTMLResponse(content=f"<h1>Error loading index.html: {e}</h1>", status_code=500)
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin():
@@ -91,6 +109,7 @@ async def unified_search(
     mpn: Optional[str] = Query(None, description="Search by MPN"),
     color: Optional[str] = Query(None, description="Filter by color"),
     size: Optional[str] = Query(None, description="Filter by size"),
+    shops: Optional[List[str]] = Query(None, description="Filter by multiple shops"),
     sort: Optional[str] = Query("relevance", description="Sort order"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(50, ge=1, le=100, description="Results per page"),
@@ -113,7 +132,8 @@ async def unified_search(
             ean=ean,
             mpn=mpn,
             color=color,
-            size=size
+            size=size,
+            shops=shops
         )
         
         if type == "categories":
@@ -133,7 +153,7 @@ async def unified_search(
         else:
             # Unified search (default)
             products = await search_service.search_products_aggregated(filters, page, min(per_page // 2, 20), sort)
-            categories = await search_service.search_categories(q or "", min(per_page // 2, 10))
+            categories = await search_service.search_categories(q or "", min(per_page // 2, 12))
             
             return {
                 "type": "unified",
@@ -222,10 +242,10 @@ async def get_search_suggestions(
     """Get search suggestions with Elasticsearch fallback"""
     try:
         # Try Elasticsearch first
-        if elasticsearch_service.client:
-            suggestions = await elasticsearch_service.get_suggestions(q, limit)
-            if suggestions:
-                return suggestions
+        # if elasticsearch_service.client:
+        #     suggestions = await elasticsearch_service.get_suggestions(q, limit)
+        #     if suggestions:
+        #         return suggestions
         
         # Fallback to PostgreSQL
         search_service = SearchService(db)
@@ -280,6 +300,47 @@ async def get_shops(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error getting shops: {e}")
         raise HTTPException(status_code=500, detail="Shop retrieval error")
+
+@app.post("/shops", response_model=ShopSchema, status_code=201)
+async def create_shop(shop: ShopCreate, db: AsyncSession = Depends(get_db)):
+    """Create a new shop."""
+    try:
+        # Check for duplicate shop name
+        from sqlalchemy import select
+        result = await db.execute(select(Shop).where(Shop.name == shop.name))
+        existing = result.scalar_one_or_none()
+        if existing:
+            raise HTTPException(status_code=400, detail="Shop with this name already exists")
+        new_shop = Shop(name=shop.name, xml_url=shop.xml_url)
+        db.add(new_shop)
+        await db.commit()
+        await db.refresh(new_shop)
+        return ShopSchema.from_orm(new_shop)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating shop: {e}")
+        raise HTTPException(status_code=500, detail="Shop creation error")
+
+@app.delete("/shops/{shop_id}", status_code=204)
+async def delete_shop(shop_id: int, db: AsyncSession = Depends(get_db)):
+    """Delete a shop by ID, including all its products (cascade)."""
+    try:
+        from sqlalchemy import select, delete
+        # Check if shop exists
+        result = await db.execute(select(Shop).where(Shop.id == shop_id))
+        shop = result.scalar_one_or_none()
+        if not shop:
+            raise HTTPException(status_code=404, detail="Shop not found")
+        # Delete the shop (products will be deleted via cascade)
+        await db.delete(shop)
+        await db.commit()
+        return
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting shop {shop_id}: {e}")
+        raise HTTPException(status_code=500, detail="Shop deletion error")
 
 @app.post("/admin/process-feeds", response_model=List[FeedProcessResult])
 async def process_feeds(background_tasks: BackgroundTasks):
@@ -340,3 +401,9 @@ if __name__ == "__main__":
         reload=False,
         log_level=settings.LOG_LEVEL.lower()
     )
+
+@app.post("/image-search")
+async def image_search(image: UploadFile = File(...)):
+    contents = await image.read()
+    # Process the image...
+    return JSONResponse({"filename": image.filename, "message": "Image received"})

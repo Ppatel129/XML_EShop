@@ -81,12 +81,13 @@ class AdminApp {
             if (shops.length === 0) {
                 shopsTable.innerHTML = `
                     <tr>
-                        <td colspan="6" class="text-center text-muted">No shops configured</td>
+                        <td colspan="7" class="text-center text-muted">No shops configured</td>
                     </tr>
                 `;
                 return;
             }
 
+            console.log(shops)
             shopsTable.innerHTML = shops.map(shop => `
                 <tr>
                     <td><strong>${shop.name}</strong></td>
@@ -94,7 +95,7 @@ class AdminApp {
                     <td>${shop.last_sync ? new Date(shop.last_sync).toLocaleString() : 'Never'}</td>
                     <td><span class="badge ${this.getStatusBadgeClass(shop.sync_status)}">${shop.sync_status}</span></td>
                     <td>${shop.total_products || 0}</td>
-                    <td class="text-danger small">${shop.error_message || ''}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="adminApp.openDeleteShopModal(${shop.id}, '${shop.name.replace(/'/g, "&#39;")}')"><i class="fas fa-trash"></i> Delete</button></td>
                 </tr>
             `).join('');
         } catch (error) {
@@ -202,6 +203,61 @@ class AdminApp {
         const logContainer = document.getElementById('processingLog');
         logContainer.innerHTML = '<p class="text-muted">Processing logs cleared...</p>';
     }
+
+    // Add methods for delete shop modal
+    openDeleteShopModal(shopId, shopName) {
+        this.shopToDelete = shopId;
+        document.getElementById('deleteShopName').textContent = shopName;
+        if (!this.deleteShopModal) {
+            this.deleteShopModal = new bootstrap.Modal(document.getElementById('deleteShopModal'));
+        }
+        this.deleteShopModal.show();
+    }
+
+    async confirmDeleteShop() {
+        if (!this.shopToDelete) return;
+        try {
+            document.getElementById('confirmDeleteShopBtn').disabled = true;
+            await axios.delete(`/shops/${this.shopToDelete}`);
+            this.addLog('Shop deleted successfully', 'success');
+            this.deleteShopModal.hide();
+            this.shopToDelete = null;
+            await this.refreshShops();
+        } catch (error) {
+            this.addLog('Error deleting shop: ' + (error.response?.data?.detail || error.message), 'error');
+        } finally {
+            document.getElementById('confirmDeleteShopBtn').disabled = false;
+        }
+    }
+
+    // Add Shop Modal logic
+    openAddShopModal() {
+        if (!this.addShopModal) {
+            this.addShopModal = new bootstrap.Modal(document.getElementById('addShopModal'));
+        }
+        document.getElementById('addShopForm').reset();
+        this.addShopModal.show();
+    }
+
+    async confirmAddShop() {
+        const name = document.getElementById('addShopName').value.trim();
+        const xmlUrl = document.getElementById('addShopXmlUrl').value.trim();
+        if (!name || !xmlUrl) {
+            this.addLog('Shop name and XML URL are required', 'error');
+            return;
+        }
+        document.getElementById('confirmAddShopBtn').disabled = true;
+        try {
+            await axios.post('/shops', { name, xml_url: xmlUrl });
+            this.addLog('Shop added successfully', 'success');
+            this.addShopModal.hide();
+            await this.refreshShops();
+        } catch (error) {
+            this.addLog('Error adding shop: ' + (error.response?.data?.detail || error.message), 'error');
+        } finally {
+            document.getElementById('confirmAddShopBtn').disabled = false;
+        }
+    }
 }
 
 // Global functions for button handlers
@@ -223,11 +279,36 @@ function cleanupDatabase() {
     adminApp.cleanupDatabase();
 }
 
-function clearLog() {
-    adminApp.clearLog();
+function goBackToSearch(maxSteps = 10) {
+  let currentURL = window.location.href;
+  let step = -1;
+
+  function tryGoBack() {
+    if (step < -maxSteps) return; // avoid infinite loop
+    history.go(step);
+  }
+
+  window.addEventListener('popstate', function check() {
+    if (window.location.href !== currentURL) {
+      window.removeEventListener('popstate', check);
+    } else {
+      step--;
+      tryGoBack();
+    }
+  });
+
+  tryGoBack();
 }
 
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     adminApp = new AdminApp();
+    // Attach delete shop confirm button handler
+    document.getElementById('confirmDeleteShopBtn').addEventListener('click', function() {
+        adminApp.confirmDeleteShop();
+    });
+    // Attach add shop confirm button handler
+    document.getElementById('confirmAddShopBtn').addEventListener('click', function() {
+        adminApp.confirmAddShop();
+    });
 });

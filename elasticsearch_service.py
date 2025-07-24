@@ -18,23 +18,44 @@ class ElasticsearchService:
         
     async def connect(self):
         """Initialize Elasticsearch connection"""
+        # Check if Elasticsearch is enabled in configuration
+        if not self.settings.ELASTICSEARCH_ENABLED:
+            logger.info("Elasticsearch disabled in configuration, using PostgreSQL search only")
+            self.client = None
+            return False
+            
+        # First check if Elasticsearch is available without creating a client
         try:
-            # For local development, use default Elasticsearch
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex(('localhost', 9200))
+            sock.close()
+            
+            if result != 0:
+                logger.warning("Elasticsearch not available (port 9200 not accessible), falling back to PostgreSQL search")
+                self.client = None
+                return False
+        except Exception:
+            logger.warning("Could not check Elasticsearch availability, falling back to PostgreSQL search")
+            self.client = None
+            return False
+            
+        try:
+            # Only create client if port is accessible
             self.client = AsyncElasticsearch(
                 hosts=[{"host": "localhost", "port": 9200, "scheme": "http"}],
-                timeout=30,
-                max_retries=3,
-                retry_on_timeout=True
+                timeout=3,  # Very short timeout
+                max_retries=0,  # No retries
+                retry_on_timeout=False
             )
-            # Test connection
-            await self.client.ping()
+            # Test connection with very short timeout
+            await asyncio.wait_for(self.client.ping(), timeout=2.0)
             logger.info("Connected to Elasticsearch successfully")
             return True
-        except ConnectionError:
-            logger.warning("Elasticsearch not available, falling back to PostgreSQL search")
-            return False
         except Exception as e:
-            logger.error(f"Failed to connect to Elasticsearch: {e}")
+            logger.warning(f"Elasticsearch connection failed ({type(e).__name__}), falling back to PostgreSQL search")
+            self.client = None
             return False
     
     async def create_index(self):

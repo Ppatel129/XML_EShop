@@ -18,20 +18,23 @@ class FeedProcessor:
         self.parser = None
     
     async def process_all_feeds(self) -> List[FeedProcessResult]:
-        """Process all configured XML feeds"""
+        """Process all shops from the database"""
         results = []
-        
         async with XMLFeedParser() as parser:
             self.parser = parser
-            
-            for shop_name, xml_url in settings.XML_FEEDS.items():
+            # Fetch all shops from the database
+            async with AsyncSessionLocal() as db:
+                from sqlalchemy import select
+                result = await db.execute(select(Shop))
+                shops = result.scalars().all()
+            for shop in shops:
                 try:
-                    result = await self.process_feed(shop_name, xml_url)
+                    result = await self.process_feed(str(shop.name), str(shop.xml_url))
                     results.append(result)
                 except Exception as e:
-                    logger.error(f"Error processing feed {shop_name}: {e}")
+                    logger.error(f"Error processing feed {shop.name}: {e}")
                     results.append(FeedProcessResult(
-                        shop_name=shop_name,
+                        shop_name=str(shop.name),
                         status="error",
                         products_processed=0,
                         products_created=0,
@@ -40,7 +43,6 @@ class FeedProcessor:
                         processing_time_seconds=0,
                         timestamp=datetime.utcnow()
                     ))
-        
         return results
     
     async def process_feed(self, shop_name: str, xml_url: str) -> FeedProcessResult:

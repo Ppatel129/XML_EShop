@@ -186,7 +186,10 @@ CREATE TRIGGER product_variants_updated_at
 -- Sample data insertion (optional)
 INSERT INTO shops (name, xml_url) VALUES 
     ('EKOS', 'https://www.ekos.gr/xml/skroutz.xml'),
-    ('BEQ', 'https://www.beq.gr/xml/skroutz.xml');
+    ('BEQ', 'https://www.beq.gr/xml/skroutz.xml'),
+    ('Zoro', 'https://www.zoro.gr/xml/skroutz.xml'),
+    ('1-3.gr', 'https://www.1-3.gr/xml/skroutz.xml');
+
 
 -- Views for common queries
 

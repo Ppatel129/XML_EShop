@@ -3,16 +3,18 @@ from typing import Optional
 
 class Settings:
     # Database configuration
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/ecommerce_search")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:123123@localhost:5432/postgres")
     
     # API Configuration
     API_HOST: str = "0.0.0.0"
-    API_PORT: int = 5000
+    API_PORT: int = 8000
     
     # XML Feed URLs
     XML_FEEDS = {
         "ekos": "https://ekos.gr/xml_feed/skroutz_ekos.xml",
-        "beq": "https://beq.gr/xml_feed/skroutz_beq.xml"
+        "beq": "https://beq.gr/xml_feed/skroutz_beq.xml",
+        "zoro": "https://zoro.gr/xml_feed/skroutz_zoro.xml",
+        "1-3gr": "https://1-3.gr/xml_feed/skroutz1-3.xml"
     }
     
     # Search configuration
@@ -29,5 +31,8 @@ class Settings:
     
     # Optional AI features
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    
+    # Elasticsearch configuration
+    ELASTICSEARCH_ENABLED: bool = os.getenv("ELASTICSEARCH_ENABLED", "false").lower() == "true"
 
 settings = Settings()

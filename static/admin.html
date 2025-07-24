@@ -16,10 +16,10 @@
                 Admin Dashboard
             </a>
             <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">
+                <p class="nav-link textbtn" onclick="goBackToSearch()">
                     <i class="fas fa-search me-1"></i>
                     Back to Search
-                </a>
+                </p>
             </div>
         </div>
     </nav>
@@ -112,7 +112,7 @@
                                         <th>Last Sync</th>
                                         <th>Status</th>
                                         <th>Products</th>
-                                        <th>Error Message</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="shopsTable">
@@ -123,6 +123,10 @@
                         <button class="btn btn-primary mt-3" onclick="refreshShops()">
                             <i class="fas fa-sync me-2"></i>
                             Refresh Shops
+                        </button>
+                        <button class="btn btn-success mt-3 ms-2" onclick="adminApp.openAddShopModal()">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Shop
                         </button>
                     </div>
                 </div>
@@ -169,6 +173,54 @@
                         <div class="progress-bar progress-bar-striped progress-bar-animated" 
                              role="progressbar" style="width: 100%"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Shop Modal -->
+    <div class="modal fade" id="deleteShopModal" tabindex="-1" aria-labelledby="deleteShopModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteShopModalLabel">Delete Shop</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this shop and all its products? This action cannot be undone.</p>
+                    <div id="deleteShopName" class="fw-bold mb-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteShopBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Shop Modal -->
+    <div class="modal fade" id="addShopModal" tabindex="-1" aria-labelledby="addShopModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addShopModalLabel">Add Shop</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addShopForm">
+                        <div class="mb-3">
+                            <label for="addShopName" class="form-label">Shop Name</label>
+                            <input type="text" class="form-control" id="addShopName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="addShopXmlUrl" class="form-label">XML URL</label>
+                            <input type="url" class="form-control" id="addShopXmlUrl" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmAddShopBtn">Add</button>
                 </div>
             </div>
         </div>
